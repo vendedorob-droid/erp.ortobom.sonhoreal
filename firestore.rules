@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // PERMISSÃO TOTAL PARA USUÁRIOS LOGADOS
+    // Esta regra garante que se o usuário estiver logado, ele pode ler e gravar dados.
+    // A segurança de "quem vê o quê" agora é feita pelo código do sistema.
+    
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

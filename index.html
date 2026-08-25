@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Colchoeiro ERP — Acesso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/main.css"/>
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f111a; }
+    .pin-wrap { width: 100%; max-width: 360px; padding: 24px; text-align: center; }
+    .pin-card { background: #171924; border: 1px solid rgba(255,255,255,.07); border-radius: 24px; padding: 40px 30px; }
+    .pin-title { font-size: 22px; font-weight: 800; margin-bottom: 8px; color: #fff; }
+    .pin-sub { font-size: 14px; color: #64748b; margin-bottom: 30px; }
+    .pin-input-group { display: flex; justify-content: center; gap: 12px; margin-bottom: 30px; }
+    .pin-dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #334155; transition: all 0.2s; }
+    .pin-dot.active { background: #6366f1; border-color: #6366f1; box-shadow: 0 0 15px rgba(99,102,241,0.5); }
+    .pin-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+    .pin-btn {
+      width: 70px; height: 70px; border-radius: 50%; background: #1e2030; border: 1px solid rgba(255,255,255,.05);
+      color: #fff; font-size: 24px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.1s;
+    }
+    .pin-btn:active { background: #6366f1; transform: scale(0.9); }
+    .pin-btn.empty { background: transparent; border: none; cursor: default; }
+    .pin-btn.back { font-size: 18px; color: #64748b; }
+    .error-msg { color: #ef4444; font-size: 13px; margin-top: 15px; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="pin-wrap">
+  <div class="pin-card">
+    <div class="pin-title">Acesso ao ERP</div>
+    <div class="pin-sub" id="pin-sub">Digite seu PIN de acesso</div>
+    
+    <div class="pin-input-group" id="pin-dots">
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+      <div class="pin-dot"></div>
+    </div>
+
+    <div class="pin-grid">
+      <button class="pin-btn" onclick="addNum('1')">1</button>
+      <button class="pin-btn" onclick="addNum('2')">2</button>
+      <button class="pin-btn" onclick="addNum('3')">3</button>
+      <button class="pin-btn" onclick="addNum('4')">4</button>
+      <button class="pin-btn" onclick="addNum('5')">5</button>
+      <button class="pin-btn" onclick="addNum('6')">6</button>
+      <button class="pin-btn" onclick="addNum('7')">7</button>
+      <button class="pin-btn" onclick="addNum('8')">8</button>
+      <button class="pin-btn" onclick="addNum('9')">9</button>
+      <div class="pin-btn empty"></div>
+      <button class="pin-btn" onclick="addNum('0')">0</button>
+      <button class="pin-btn back" onclick="backspace()">⌫</button>
+    </div>
+
+    <div id="error-msg" class="error-msg">PIN incorreto. Tente novamente.</div>
+  </div>
+  
+  <p style="font-size: 12px; color: #475569; margin-top: 20px;">
+    Primeiro acesso? Digite o PIN padrão <b>1234</b>
+  </p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/auth.js"></script>
+
+<script>
+  let currentPin = "";
+  const dots = document.querySelectorAll('.pin-dot');
+
+  Auth.init((profile) => {
+    if (profile) window.location.href = 'dashboard.html';
+  });
+
+  function addNum(num) {
+    if (currentPin.length >= 4) return;
+    currentPin += num;
+    updateDots();
+    
+    if (currentPin.length === 4) {
+      checkPin();
+    }
+  }
+
+  function backspace() {
+    currentPin = currentPin.slice(0, -1);
+    updateDots();
+    document.getElementById('error-msg').style.display = 'none';
+  }
+
+  function updateDots() {
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i < currentPin.length);
+    });
+  }
+
+  async function checkPin() {
+    const res = await Auth.selectProfile(currentPin);
+    if (res.ok) {
+      window.location.href = 'dashboard.html';
+    } else {
+      document.getElementById('error-msg').textContent = res.message;
+      document.getElementById('error-msg').style.display = 'block';
+      currentPin = "";
+      setTimeout(updateDots, 300);
+    }
+  }
+
+  // Permite digitar o PIN pelo teclado físico (útil em notebook/desktop),
+  // além de tocar nos botões — não há outros campos de texto nesta tela,
+  // então é seguro ouvir o teclado na página inteira.
+  document.addEventListener('keydown', (e) => {
+    if (e.key >= '0' && e.key <= '9') addNum(e.key);
+    else if (e.key === 'Backspace') backspace();
+  });
+</script>
+</body>
+</html>

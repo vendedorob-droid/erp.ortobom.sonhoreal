@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Colchoeiro ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/main.css"/>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🛏</div>
+      <span class="sidebar-logo-text" id="company-name">Colchoeiro ERP</span>
+    </div>
+
+    <div class="sidebar-profile">
+      <div class="avatar avatar-sm" id="profile-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">?</div>
+      <div class="sidebar-profile-info">
+        <div class="sidebar-profile-name" id="profile-name">Carregando...</div>
+        <div class="sidebar-profile-role" id="profile-role"></div>
+      </div>
+    </div>
+
+    <nav id="sidebar-nav"></nav>
+  </aside>
+
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+  <!-- ══ MAIN ══ -->
+  <div id="main">
+    <header id="topbar">
+      <button class="icon-btn" onclick="toggleSidebar()" aria-label="Menu">
+        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      </button>
+
+      <div class="topbar-search">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="global-search" placeholder="Buscar produtos, clientes, orçamentos..." oninput="handleSearch(this.value)">
+      </div>
+
+      <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <div style="position:relative">
+          <button class="icon-btn" onclick="loadModule('notifications')" aria-label="Notificações">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+          </button>
+          <div id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:#ef4444;border-radius:50%;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800">0</div>
+        </div>
+
+        <div style="position:relative">
+          <div class="avatar avatar-md" id="topbar-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);cursor:pointer" onclick="toggleUserMenu()">?</div>
+          <div id="user-menu" style="display:none;position:absolute;right:0;top:42px;background:#171924;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px;min-width:160px;z-index:500">
+            <button class="nav-item" style="width:100%" onclick="loadModule('profile')">
+              <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
+              <span>Meu perfil</span>
+            </button>
+            <button class="nav-item" style="width:100%;color:#8b5cf6" onclick="handleSwitchProfile()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Trocar Perfil</span>
+            </button>
+            <button class="nav-item" style="width:100%;color:#ef4444" onclick="Auth.switchProfile()">
+              <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+              <span>Sair</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main id="content">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%">
+        <div class="spinner" style="width:40px;height:40px"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+<script src="js/firebase-config.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/auth.js"></script>
+
+<script src="modules/dashboard.js"></script>
+<script src="modules/products.js"></script>
+<script src="modules/brands.js"></script>
+<script src="modules/stock.js"></script>
+<script src="modules/customers.js"></script>
+<script src="modules/print.js"></script>
+<script src="modules/quotes.js"></script>
+<script src="modules/sales.js"></script>
+<script src="modules/scanner.js"></script>
+<script src="modules/deliveries.js"></script>
+<script src="modules/users_admin.js"></script>
+<script src="modules/commissions.js"></script>
+<script src="modules/profile.js"></script>
+<!-- Financial e Settings estão definidos dentro de modules/sales.js (não são arquivos separados) -->
+
+<script>
+const NAV_CONFIG = {
+  admin: [
+    { section: 'Principal' },
+    { id:'dashboard',   label:'Dashboard',      icon:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+    { id:'scanner',     label:'Venda / Scan',   icon:'M6 2H4a2 2 0 00-2 2v2M6 22H4a2 2 0 01-2-2v-2M18 2h2a2 2 0 012 2v2M18 22h2a2 2 0 002-2v-2M7 12h10', dot:true },
+    { section: 'Cadastros' },
+    { id:'products',    label:'Produtos',        icon:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+    { id:'stock',       label:'Estoque',         icon:'M20.59 22H3.41a1 1 0 01-1-1.11l1.35-13.5a1 1 0 011-.89h13.48a1 1 0 011 .89l1.35 13.5a1 1 0 01-1 1.11z M8 10V6a4 4 0 018 0v4' },
+    { id:'brands',      label:'Marcas',          icon:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
+    { id:'customers',   label:'Clientes (CRM)',  icon:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75' },
+    { section: 'Comercial' },
+    { id:'quotes',      label:'Orçamentos',      icon:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8' },
+    { id:'sales',       label:'Vendas',          icon:'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
+    { section: 'Gestão' },
+    { id:'deliveries',  label:'Entregas',        icon:'M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M16 8h2.586A1 1 0 0119.293 8.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1' },
+    { id:'financial',   label:'Financeiro',      icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10' },
+    { id:'commissions', label:'Comissões',       icon:'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915' },
+    { id:'users_admin', label:'Usuários',        icon:'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197' },
+    { id:'settings',    label:'Configurações',   icon:'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0' },
+  ],
+  // Gerente já tem permissão de código (Auth.hasMinRole('gerente')) para editar produtos,
+  // marcas, estoque, ver todas as vendas/entregas e imprimir relatórios — só faltava o menu
+  // para chegar até essas telas (antes caía no menu limitado do vendedor).
+  gerente: [
+    { section: 'Principal' },
+    { id:'dashboard',   label:'Dashboard',      icon:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+    { id:'scanner',     label:'Venda / Scan',   icon:'M6 2H4a2 2 0 00-2 2v2M6 22H4a2 2 0 01-2-2v-2M18 2h2a2 2 0 012 2v2M18 22h2a2 2 0 002-2v-2M7 12h10', dot:true },
+    { section: 'Cadastros' },
+    { id:'products',    label:'Produtos',        icon:'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' },
+    { id:'stock',       label:'Estoque',         icon:'M20.59 22H3.41a1 1 0 01-1-1.11l1.35-13.5a1 1 0 011-.89h13.48a1 1 0 011 .89l1.35 13.5a1 1 0 01-1 1.11z M8 10V6a4 4 0 018 0v4' },
+    { id:'brands',      label:'Marcas',          icon:'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
+    { id:'customers',   label:'Clientes (CRM)',  icon:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75' },
+    { section: 'Comercial' },
+    { id:'quotes',      label:'Orçamentos',      icon:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z M14 2v6h6 M16 13H8 M16 17H8' },
+    { id:'sales',       label:'Vendas',          icon:'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
+    { section: 'Gestão' },
+    { id:'deliveries',  label:'Entregas',        icon:'M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M16 8h2.586A1 1 0 0119.293 8.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1' },
+    { id:'commissions', label:'Comissões',       icon:'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915' },
+  ],
+  financeiro: [
+    { section: 'Principal' },
+    { id:'dashboard',   label:'Dashboard',      icon:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+    { id:'sales',       label:'Vendas',          icon:'M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6' },
+    { id:'financial',   label:'Financeiro',      icon:'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10' },
+  ],
+  vendedor: [
+    { section: 'Vendas' },
+    { id:'dashboard',   label:'Meu Dashboard',  icon:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10' },
+    { id:'scanner',     label:'Escanear / Venda',icon:'M6 2H4a2 2 0 00-2 2v2M6 22H4a2 2 0 01-2-2v-2M18 2h2a2 2 0 012 2v2M18 22h2a2 2 0 002-2v-2M7 12h10', dot:true },
+    { id:'customers',   label:'Clientes',        icon:'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2' },
+    { id:'quotes',      label:'Meus Orçamentos', icon:'M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z' },
+  ],
+  entregador: [
+    { section: 'Logística' },
+    { id:'dashboard',   label:'Início',          icon:'M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z' },
+    { id:'deliveries',  label:'Minhas Entregas', icon:'M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10M16 8h2.586A1 1 0 0119.293 8.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1' },
+  ]
+};
+
+let currentModule = null;
+let currentProfile = null;
+
+Auth.init(async (profile) => {
+  if (!profile) {
+    window.location.href = 'index.html';
+    return;
+  }
+  currentProfile = profile;
+  setupUI(profile);
+  await loadModule('dashboard');
+});
+
+async function setupUI(profile) {
+  const initials = profile.name.split(' ').map(n=>n[0]).slice(0,2).join('').toUpperCase();
+  document.getElementById('profile-avatar').textContent = initials;
+  document.getElementById('topbar-avatar').textContent  = initials;
+  document.getElementById('profile-name').textContent   = profile.name;
+  document.getElementById('profile-role').textContent   = profile.role.toUpperCase();
+
+  try {
+    const snap = await db.collection('companies').doc(profile.companyId).collection('settings').doc('general').get();
+    if (snap.exists) {
+      document.getElementById('company-name').textContent = snap.data().fantasyName || 'Colchoeiro ERP';
+    }
+  } catch(e) {}
+
+  buildNav(profile.role);
+}
+
+function buildNav(role) {
+  const items = NAV_CONFIG[role] || NAV_CONFIG.vendedor;
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = '';
+  items.forEach(item => {
+    if (item.section) {
+      const lbl = document.createElement('div');
+      lbl.className = 'nav-section-label';
+      lbl.textContent = item.section;
+      nav.appendChild(lbl);
+      return;
+    }
+    const btn = document.createElement('button');
+    btn.className = 'nav-item';
+    btn.setAttribute('data-module', item.id);
+    btn.onclick = () => loadModule(item.id);
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${item.icon}"/></svg><span>${item.label}</span>${item.dot ? '<span class="nav-dot"></span>' : ''}`;
+    nav.appendChild(btn);
+  });
+}
+
+async function loadModule(moduleId) {
+  currentModule = moduleId;
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.getAttribute('data-module') === moduleId));
+  closeSidebar();
+  const content = document.getElementById('content');
+  content.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px"><div class="spinner"></div></div>';
+  
+  const modules = {
+    'dashboard':  () => Dashboard.render(content),
+    'products':   () => Products.render(content),
+    'stock':      () => Stock.render(content),
+    'brands':     () => Brands.render(content),
+    'customers':  () => Customers.render(content),
+    'quotes':     () => Quotes.render(content),
+    'sales':      () => Sales.render(content),
+    'scanner':    () => Scanner.render(content),
+    'deliveries': () => Deliveries.render(content),
+    'financial':  () => Financial.render(content),
+    'users_admin':() => UsersAdmin.render(content),
+    'commissions':() => Commissions.render(content),
+    'settings':   () => Settings.render(content),
+    'profile':    () => Profile.render(content)
+  };
+
+  try {
+    if (modules[moduleId]) await modules[moduleId]();
+    else content.innerHTML = '<p>Módulo não encontrado.</p>';
+  } catch(err) {
+    content.innerHTML = `<p style="color:red">Erro ao carregar: ${err.message}</p>`;
+  }
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  // No celular/tablet a sidebar vira um menu-gaveta (classe "open").
+  // No desktop ela só encolhe para ícones (classe "collapsed").
+  if (window.innerWidth <= 768) {
+    sidebar.classList.toggle('open');
+  } else {
+    sidebar.classList.toggle('collapsed');
+  }
+}
+function closeSidebar() { if (window.innerWidth <= 768) document.getElementById('sidebar').classList.remove('open'); }
+
+// Evita estado inconsistente ao redimensionar a janela (ex: girar o
+// tablet, ou usar um notebook perto do breakpoint) — limpa a classe
+// que não faz sentido no novo tamanho de tela.
+let _lastIsMobile = window.innerWidth <= 768;
+window.addEventListener('resize', () => {
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile !== _lastIsMobile) {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.remove(isMobile ? 'collapsed' : 'open');
+    _lastIsMobile = isMobile;
+  }
+});
+function toggleUserMenu() {
+  const m = document.getElementById('user-menu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+}
+
+function handleSwitchProfile() {
+  document.getElementById('user-menu').style.display = 'none';
+  let pin = '';
+  const render = () => `
+    <div style="text-align:center">
+      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
+        ${[0,1,2,3].map(i => `<div style="width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);${i < pin.length ? 'background:var(--accent);border-color:var(--accent)' : ''}"></div>`).join('')}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;max-width:240px;margin:0 auto">
+        ${['1','2','3','4','5','6','7','8','9','','0','⌫'].map(k => k === ''
+          ? '<div></div>'
+          : `<button class="btn btn-secondary" style="height:56px;font-size:18px" onclick="_switchPad('${k}')">${k}</button>`
+        ).join('')}
+      </div>
+      <div id="switch-pin-error" style="color:var(--red);font-size:13px;margin-top:14px;display:none">PIN incorreto.</div>
+    </div>`;
+
+  window._switchPad = async (k) => {
+    const err = document.getElementById('switch-pin-error');
+    if (err) err.style.display = 'none';
+    if (k === '⌫') { pin = pin.slice(0, -1); }
+    else if (pin.length < 4) { pin += k; }
+    document.querySelector('.modal-body').innerHTML = render();
+    if (pin.length === 4) {
+      UI.loading(true);
+      const res = await Auth.selectProfile(pin);
+      UI.loading(false);
+      if (res.ok) { window.location.reload(); }
+      else {
+        pin = '';
+        document.querySelector('.modal-body').innerHTML = render();
+        document.getElementById('switch-pin-error').style.display = 'block';
+      }
+    }
+  };
+
+  UI.modal({ title: 'Trocar Perfil', size: 'sm', body: render(), actions: [] });
+
+  // Permite digitar o PIN pelo teclado físico (notebook/desktop) enquanto
+  // este modal estiver aberto. O listener se remove sozinho ao detectar
+  // que o modal foi fechado, então não interfere no resto do app.
+  const keyHandler = (e) => {
+    if (!document.getElementById('modal-overlay')) {
+      document.removeEventListener('keydown', keyHandler);
+      return;
+    }
+    if (e.key >= '0' && e.key <= '9') window._switchPad(e.key);
+    else if (e.key === 'Backspace') window._switchPad('⌫');
+  };
+  document.addEventListener('keydown', keyHandler);
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#topbar-avatar') && !e.target.closest('#user-menu')) {
+    document.getElementById('user-menu').style.display = 'none';
+  }
+});
+
+let searchTimeout;
+function handleSearch(v) {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => { if (window.GlobalSearch) GlobalSearch.run(v); }, 400);
+}
+</script>
+</body>
+</html>
