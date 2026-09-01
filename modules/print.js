@@ -133,7 +133,7 @@ const Receipt = (() => {
       ${discount > 0.004 ? `<div style="font-size:12px; display:flex; justify-content:space-between; color:#0a7"><span>Desconto</span><span>-${UI.money(discount)}</span></div>` : ''}
       <div style="display:flex; justify-content:space-between; margin-top:6px"><span style="font-weight:800; font-size:15px">Total</span><span style="font-weight:800; font-size:15px">${UI.money(s.total)}</span></div>
       <div class="r-label">
-        Pagamento: <b>${(s.paymentMethod || '').replace(/_/g, ' ').toUpperCase()}</b>
+        Pagamento: <b>${(s.paymentMethodName || (s.paymentMethod || '').replace(/_/g, ' ')).toUpperCase()}</b>
         ${s.installments > 1 ? ` — ${s.installments}x de ${UI.money(s.installmentValue || s.total / s.installments)}` : ''}
       </div>
       <div class="r-foot">Obrigado pela preferência! 🛏️</div>

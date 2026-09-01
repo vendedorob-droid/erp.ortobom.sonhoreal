@@ -2,10 +2,35 @@
 // COLCHOEIRO ERP — Módulo Vendas
 // ============================================================
 
+// Lista padrão de formas de pagamento — usada quando a empresa ainda
+// não configurou nada em Configurações → Formas de Pagamento. Os IDs
+// são fixos de propósito (não aleatórios) para ficar compatível com
+// vendas antigas gravadas com esses mesmos valores, e para que Vendas,
+// Financeiro e Configurações sempre caiam nos mesmos padrões mesmo sem
+// nada salvo ainda no Firestore.
+function _defaultPaymentMethods(legacyCashDiscount) {
+  const d = legacyCashDiscount != null ? legacyCashDiscount : 5;
+  return [
+    { id: 'pix', name: 'PIX', discount: d, installments: false },
+    { id: 'dinheiro', name: 'Dinheiro', discount: d, installments: false },
+    { id: 'cartao_debito', name: 'Cartão de Débito', discount: 0, installments: false },
+    { id: 'cartao_credito', name: 'Cartão de Crédito', discount: 0, installments: true },
+  ];
+}
+
 const Sales = (() => {
 
   let all = [], filtered = [], page = 1;
+  let paymentMethods = [];
   const PER_PAGE = 15;
+
+  async function _loadPaymentMethods() {
+    try {
+      const snap = await db.collection('companies').doc(Auth.getCompanyId()).collection('settings').doc('general').get();
+      const d = snap.exists ? snap.data() : {};
+      paymentMethods = (d.paymentMethods && d.paymentMethods.length) ? d.paymentMethods : _defaultPaymentMethods(d.cashDiscount);
+    } catch (e) { paymentMethods = _defaultPaymentMethods(); }
+  }
 
   async function render(container) {
     container.innerHTML = `<div class="fade-in">
@@ -28,16 +53,31 @@ const Sales = (() => {
       </div>
       <div id="s-pg" style="display:flex;gap:8px;justify-content:flex-end;padding:14px 0"></div>
     </div>`;
-    await _load();
+    await Promise.all([_load(), _loadPaymentMethods()]);
   }
 
   async function _load() {
     try {
       const companyId = Auth.getCompanyId();
-      const snap = await db.collection('companies').doc(companyId).collection('sales').orderBy('createdAt','desc').get();
+      const isVendedor = Auth.getRole() === 'vendedor';
+
+      let snap;
+      if (isVendedor) {
+        // Vendedor só vê as próprias vendas, nunca o total da loja.
+        // Filtro simples (sem orderBy) pra não depender de índice
+        // composto — ordenamos aqui no código mesmo.
+        snap = await db.collection('companies').doc(companyId).collection('sales')
+          .where('sellerId', '==', Auth.getProfileId()).get();
+      } else {
+        snap = await db.collection('companies').doc(companyId).collection('sales').orderBy('createdAt', 'desc').get();
+      }
+
       all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (isVendedor) {
+        all.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      }
       filtered = all;
-      document.getElementById('s-sub').textContent = `${all.length} vendas registradas`;
+      document.getElementById('s-sub').textContent = isVendedor ? `${all.length} vendas suas registradas` : `${all.length} vendas registradas`;
       _render(all);
     } catch(err) {
       document.getElementById('s-table').innerHTML = `<div style="padding:20px;color:#ef4444">Erro: ${err.message}</div>`;
@@ -66,7 +106,7 @@ const Sales = (() => {
           <td><div style="font-weight:700">${s.customerName}</div></td>
           <td>${s.sellerName||'—'}</td>
           <td>${UI.badge(s.origin||'loja')}</td>
-          <td>${(s.paymentMethod||'').toUpperCase()}</td>
+          <td>${(s.paymentMethodName || s.paymentMethod || '').toUpperCase()}</td>
           <td style="text-align:right;font-weight:800;color:#10b981">${UI.money(s.total||0)}</td>
           <td>${UI.badge(s.status||'concluido')}</td>
           <td>
@@ -95,10 +135,16 @@ const Sales = (() => {
   function _pg(p) { page = p; _render(all); }
 
   async function _detail(id) {
-    const s = all.find(x => x.id === id);
-    if (!s) return;
-    
+    let s = all.find(x => x.id === id);
     const companyId = Auth.getCompanyId();
+    if (!s) {
+      // Acontece com o vendedor: o dashboard dele abre o detalhe direto,
+      // sem passar pela lista completa de Vendas (que ele nem acessa).
+      const doc = await db.collection('companies').doc(companyId).collection('sales').doc(id).get();
+      if (!doc.exists) return;
+      s = { id: doc.id, ...doc.data() };
+    }
+
     const proofSnap = await db.collection('companies').doc(companyId).collection('paymentProofs').where('saleId','==',id).get();
     const proofs = proofSnap.docs.map(d => ({id: d.id, ...d.data()}));
 
@@ -117,7 +163,7 @@ const Sales = (() => {
           <div>
             <div class="form-label">Financeiro</div>
             <p><b>Total:</b> ${UI.money(s.total)}</p>
-            <p><b>Pagamento:</b> ${s.paymentMethod.toUpperCase()}${s.installments > 1 ? ` — ${s.installments}x de ${UI.money(s.installmentValue || s.total / s.installments)}` : ''}</p>
+            <p><b>Pagamento:</b> ${(s.paymentMethodName || s.paymentMethod || '').toUpperCase()}${s.installments > 1 ? ` — ${s.installments}x de ${UI.money(s.installmentValue || s.total / s.installments)}` : ''}</p>
             <p><b>Comissão:</b> ${UI.money(s.commissionVal)} (${s.commissionPct}%)</p>
           </div>
         </div>
@@ -261,10 +307,7 @@ const Sales = (() => {
         <div class="form-group">
           <label class="form-label">Método de Pagamento</label>
           <select class="form-input" id="fin-method">
-            <option value="pix" ${s.paymentMethod==='pix'?'selected':''}>PIX</option>
-            <option value="dinheiro" ${s.paymentMethod==='dinheiro'?'selected':''}>Dinheiro</option>
-            <option value="cartao_debito" ${s.paymentMethod==='cartao_debito'?'selected':''}>Débito</option>
-            <option value="cartao_credito" ${s.paymentMethod==='cartao_credito'?'selected':''}>Crédito</option>
+            ${paymentMethods.map(pm => `<option value="${pm.id}" ${s.paymentMethod===pm.id?'selected':''}>${pm.name}</option>`).join('')}
           </select>
         </div>
       `,
@@ -286,6 +329,7 @@ const Sales = (() => {
       await db.collection('companies').doc(companyId).collection('sales').doc(id).update({
         total: parseFloat(document.getElementById('fin-total').value),
         paymentMethod: document.getElementById('fin-method').value,
+        paymentMethodName: paymentMethods.find(pm => pm.id === document.getElementById('fin-method').value)?.name || document.getElementById('fin-method').value,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       UI.loading(false); UI.closeModal(); UI.toast('Financeiro atualizado!', 'success');
@@ -477,7 +521,7 @@ const Sales = (() => {
               <td>${s.customerName}</td>
               <td>${s.sellerName || '—'}</td>
               <td style="max-width:220px">${(s.items || []).map(i => `${i.brand || ''} ${i.model || ''} (${i.qty}x)`).join(', ')}</td>
-              <td>${(s.paymentMethod || '').toUpperCase()}</td>
+              <td>${(s.paymentMethodName || s.paymentMethod || '').toUpperCase()}</td>
               <td style="text-align:right;font-weight:800;color:#10b981">${UI.money(s.total || 0)}</td>
               <td>${UI.badge(s.status || 'concluido')}</td>
             </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;padding:24px;color:#64748b">Nenhuma venda encontrada com esses filtros.</td></tr>'}
@@ -528,7 +572,7 @@ const Sales = (() => {
               <td>${s.customerName}</td>
               <td>${s.sellerName || '—'}</td>
               <td>${(s.items || []).map(i => `${i.brand || ''} ${i.model || ''} (${i.qty}x)`).join(', ')}</td>
-              <td>${(s.paymentMethod || '').toUpperCase()}</td>
+              <td>${(s.paymentMethodName || s.paymentMethod || '').toUpperCase()}</td>
               <td>${UI.money(s.total || 0)}</td>
               <td>${s.status || 'concluido'}</td>
             </tr>`).join('')}
@@ -569,6 +613,7 @@ const Financial = (() => {
 // ============================================================
 const Settings = (() => {
   let config = {};
+  let paymentMethods = [];
 
   async function render(container) {
     container.innerHTML = `<div class="fade-in">
@@ -631,14 +676,18 @@ const Settings = (() => {
         </div>
 
         <div class="card">
+          <div class="card-title">💳 Formas de Pagamento</div>
+          <p style="font-size:12px; color:var(--muted); margin-bottom:12px">Edite nomes, o desconto de cada forma e se ela permite parcelamento. Isso alimenta o formulário de venda automaticamente.</p>
+          <div id="pm-list"></div>
+          <button class="btn btn-secondary btn-sm" onclick="Settings._addPM()" style="margin-top:6px">+ Nova Forma</button>
+          <button class="btn btn-primary" style="width:100%; margin-top:14px" onclick="Settings._savePaymentMethods()">Salvar Formas de Pagamento</button>
+        </div>
+
+        <div class="card">
           <div class="card-title">Regras de Venda</div>
           <div class="form-group">
             <label class="form-label">Meta de Vendas Mensal (R$)</label>
             <input type="number" class="form-input" id="set-goal" placeholder="Ex: 50000">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Desconto PIX/Dinheiro (%)</label>
-            <input type="number" class="form-input" id="set-disc" placeholder="Ex: 5">
           </div>
           <div class="form-group">
             <label class="form-label">Sugestões de Observações (uma por linha)</label>
@@ -661,7 +710,6 @@ const Settings = (() => {
       document.getElementById('set-logo').value = config.logoUrl || '';
       document.getElementById('set-drive').value = config.driveUrl || '';
       document.getElementById('set-goal').value = config.monthlyGoal || '';
-      document.getElementById('set-disc').value = config.cashDiscount || '';
       document.getElementById('set-obs').value = (config.obsSuggestions || []).join('\n');
       document.getElementById('set-cld-name').value = config.cloudinaryCloudName || '';
       document.getElementById('set-cld-preset').value = config.cloudinaryUploadPreset || '';
@@ -670,9 +718,51 @@ const Settings = (() => {
         pv.src = config.logoUrl; pv.style.display = 'block';
       }
     }
+    paymentMethods = (config.paymentMethods && config.paymentMethods.length) ? config.paymentMethods : _defaultPaymentMethods(config.cashDiscount);
+    _renderPaymentMethods();
     if (Auth.hasRole('admin')) {
       document.getElementById('admin-cleanup').style.display = 'block';
     }
+  }
+
+  function _renderPaymentMethods() {
+    document.getElementById('pm-list').innerHTML = paymentMethods.map((pm, idx) => `
+      <div style="display:grid; grid-template-columns:1fr 84px auto 32px; gap:8px; align-items:center; margin-bottom:8px">
+        <input class="form-input" value="${pm.name}" placeholder="Nome" oninput="Settings._updatePM(${idx},'name',this.value)">
+        <input class="form-input" type="number" min="0" max="100" step="0.5" value="${pm.discount}" title="Desconto (%)" oninput="Settings._updatePM(${idx},'discount',this.value)">
+        <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--muted); white-space:nowrap">
+          <input type="checkbox" ${pm.installments ? 'checked' : ''} onchange="Settings._updatePM(${idx},'installments',this.checked)"> Parcela
+        </label>
+        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="Settings._removePM(${idx})" title="Remover">✕</button>
+      </div>
+    `).join('') || '<p style="font-size:12px;color:var(--muted)">Nenhuma forma de pagamento cadastrada.</p>';
+  }
+
+  function _updatePM(idx, field, val) {
+    paymentMethods[idx][field] = field === 'discount' ? (parseFloat(val) || 0) : val;
+  }
+
+  function _removePM(idx) {
+    paymentMethods.splice(idx, 1);
+    _renderPaymentMethods();
+  }
+
+  function _addPM() {
+    paymentMethods.push({ id: UI.shortId('pm_'), name: '', discount: 0, installments: false });
+    _renderPaymentMethods();
+  }
+
+  async function _savePaymentMethods() {
+    const clean = paymentMethods.filter(p => p.name && p.name.trim());
+    if (clean.length === 0) { UI.toast('Adicione ao menos uma forma de pagamento.', 'warn'); return; }
+    UI.loading(true);
+    try {
+      await db.collection('companies').doc(Auth.getCompanyId()).collection('settings').doc('general')
+        .set({ paymentMethods: clean, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      paymentMethods = clean;
+      _renderPaymentMethods();
+      UI.loading(false); UI.toast('Formas de pagamento salvas!');
+    } catch (err) { UI.loading(false); UI.toast('Erro: ' + err.message, 'error'); }
   }
 
   async function _save() {
@@ -684,7 +774,6 @@ const Settings = (() => {
         logoUrl: document.getElementById('set-logo').value,
         driveUrl: document.getElementById('set-drive').value,
         monthlyGoal: parseFloat(document.getElementById('set-goal').value) || 0,
-        cashDiscount: parseFloat(document.getElementById('set-disc').value) || 0,
         obsSuggestions: document.getElementById('set-obs').value.split('\n').filter(x => x.trim()),
         cloudinaryCloudName: document.getElementById('set-cld-name').value.trim(),
         cloudinaryUploadPreset: document.getElementById('set-cld-preset').value.trim(),
@@ -725,5 +814,5 @@ const Settings = (() => {
     }
   }
 
-  return { render, _save, _cleanup };
+  return { render, _save, _cleanup, _updatePM, _removePM, _addPM, _savePaymentMethods };
 })();

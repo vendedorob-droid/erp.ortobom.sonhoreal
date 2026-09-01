@@ -6,13 +6,35 @@ const Scanner = (() => {
   let cart = [];
   let products = [];
   let customers = [];
+  let paymentMethods = [];
   let sellerStoreId = null;
   let sellerStoreName = '';
 
+  // Estado da venda em andamento — fica na memória do módulo (não no HTML),
+  // por isso sobrevive quando o vendedor sai pra outra aba e volta. Só é
+  // zerado ao finalizar a venda ou clicar em "Limpar Informações".
+  let selectedCustomerId = null;
+  let saleState = { payment: 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '' };
+
+  // Mesma lista padrão usada em Configurações — ids fixos para compatibilidade
+  // com vendas antigas e pra bater com o que Configurações mostra por padrão.
+  function _defaultPaymentMethods(legacyCashDiscount) {
+    const d = legacyCashDiscount != null ? legacyCashDiscount : 5;
+    return [
+      { id: 'pix', name: 'PIX', discount: d, installments: false },
+      { id: 'dinheiro', name: 'Dinheiro', discount: d, installments: false },
+      { id: 'cartao_debito', name: 'Cartão de Débito', discount: 0, installments: false },
+      { id: 'cartao_credito', name: 'Cartão de Crédito', discount: 0, installments: true },
+    ];
+  }
+
   async function render(container) {
+    await _loadData(); // produtos, clientes, loja e formas de pagamento — precisa vir antes pra montar o formulário já certo
+
     container.innerHTML = `<div class="fade-in">
       <div class="page-header">
         <div><div class="page-title">Nova Venda</div><div class="page-sub">Selecione produtos e finalize a venda</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="Scanner._clearAll()">🗑️ Limpar Informações</button>
       </div>
 
       <div class="sale-layout" style="display:grid; grid-template-columns: 1fr 350px; gap:20px; align-items: start">
@@ -66,24 +88,21 @@ const Scanner = (() => {
             <div class="form-group">
               <label class="form-label">Forma de Pagamento</label>
               <select class="form-input" id="sale-payment" onchange="Scanner._onPaymentChange()">
-                <option value="pix">PIX (com desconto)</option>
-                <option value="dinheiro">Dinheiro (com desconto)</option>
-                <option value="cartao_debito">Cartão de Débito</option>
-                <option value="cartao_credito">Cartão de Crédito</option>
+                ${paymentMethods.map(pm => `<option value="${pm.id}" ${pm.id === saleState.payment ? 'selected' : ''}>${pm.name}${pm.discount > 0 ? ` (${pm.discount}% desc.)` : ''}</option>`).join('')}
               </select>
             </div>
-            <div class="form-group" id="installments-group" style="display:none">
+            <div class="form-group" id="installments-group" style="display:${paymentMethods.find(p => p.id === saleState.payment)?.installments ? 'block' : 'none'}">
               <label class="form-label">Parcelas</label>
               <select class="form-input" id="sale-installments" onchange="Scanner._updateTotal()">
-                ${Array.from({length:12}, (_,i) => i+1).map(n => `<option value="${n}">${n}x</option>`).join('')}
+                ${Array.from({length:12}, (_,i) => i+1).map(n => `<option value="${n}" ${n === saleState.installments ? 'selected' : ''}>${n}x</option>`).join('')}
               </select>
               <div id="installment-value" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
             </div>
             <div class="form-group">
               <label class="form-label">Origem da Venda</label>
               <select class="form-input" id="sale-origin" onchange="Scanner._updateTotal()">
-                <option value="loja">Loja Física (Comissão 5%)</option>
-                <option value="online">Venda Online (Comissão 10%)</option>
+                <option value="loja" ${saleState.origin === 'loja' ? 'selected' : ''}>Loja Física (Comissão 5%)</option>
+                <option value="online" ${saleState.origin === 'online' ? 'selected' : ''}>Venda Online (Comissão 10%)</option>
               </select>
             </div>
             <div style="display:flex; justify-content:space-between; margin-top:15px; font-weight:800; font-size:20px">
@@ -97,21 +116,21 @@ const Scanner = (() => {
             <div style="font-weight:800; margin-bottom:10px; font-size:14px">📍 Dados de Entrega</div>
             <div class="form-group">
               <label class="form-label">Prédio / Casa</label>
-              <input class="form-input" id="ent-building" placeholder="Ex: Edf. Solar">
+              <input class="form-input" id="ent-building" value="${saleState.building}" oninput="Scanner._syncField('building', this.value)" placeholder="Ex: Edf. Solar">
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
               <div class="form-group">
                 <label class="form-label">Quadra</label>
-                <input class="form-input" id="ent-block" placeholder="Ex: Q. 05">
+                <input class="form-input" id="ent-block" value="${saleState.block}" oninput="Scanner._syncField('block', this.value)" placeholder="Ex: Q. 05">
               </div>
               <div class="form-group">
                 <label class="form-label">Andar</label>
-                <input class="form-input" id="ent-floor" placeholder="Ex: 12º">
+                <input class="form-input" id="ent-floor" value="${saleState.floor}" oninput="Scanner._syncField('floor', this.value)" placeholder="Ex: 12º">
               </div>
             </div>
             <div class="form-group">
               <label class="form-label">Apartamento / Complemento</label>
-              <input class="form-input" id="ent-apt" placeholder="Ex: 1202">
+              <input class="form-input" id="ent-apt" value="${saleState.apartment}" oninput="Scanner._syncField('apartment', this.value)" placeholder="Ex: 1202">
             </div>
           </div>
 
@@ -119,7 +138,29 @@ const Scanner = (() => {
         </div>
       </div>
     </div>`;
-    await _loadData();
+
+    _restoreState();
+  }
+
+  function _restoreState() {
+    if (selectedCustomerId && customers.some(c => c.id === selectedCustomerId)) {
+      _selectCust(selectedCustomerId);
+    }
+    _renderCart();
+  }
+
+  function _syncField(key, val) {
+    saleState[key] = val;
+  }
+
+  function _clearAll() {
+    UI.confirm('Limpar cliente, produtos, pagamento e entrega desta venda?', () => {
+      cart = [];
+      selectedCustomerId = null;
+      saleState = { payment: 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '' };
+      loadModule('scanner');
+      UI.toast('Informações limpas.', 'success');
+    }, 'Limpar', true);
   }
 
   async function _loadData() {
@@ -128,6 +169,14 @@ const Scanner = (() => {
     products = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     const cSnap = await db.collection('companies').doc(companyId).collection('customers').get();
     customers = cSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Formas de pagamento configuradas em Configurações → Formas de Pagamento
+    try {
+      const sSnap = await db.collection('companies').doc(companyId).collection('settings').doc('general').get();
+      const s = sSnap.exists ? sSnap.data() : {};
+      paymentMethods = (s.paymentMethods && s.paymentMethods.length) ? s.paymentMethods : _defaultPaymentMethods(s.cashDiscount);
+    } catch (e) { paymentMethods = _defaultPaymentMethods(); }
+    if (!paymentMethods.some(p => p.id === saleState.payment)) saleState.payment = paymentMethods[0]?.id || 'pix';
 
     // Loja do vendedor logado (usada para mostrar o estoque correto na busca)
     const stores = await Stock.getStores();
@@ -194,6 +243,8 @@ const Scanner = (() => {
 
   function _selectCust(id) {
     const c = customers.find(x => x.id === id);
+    if (!c) return;
+    selectedCustomerId = id;
     document.getElementById('sale-cust-results').style.display = 'none';
     document.getElementById('sale-cust-search').value = '';
     const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
@@ -212,6 +263,7 @@ const Scanner = (() => {
   }
 
   function _clearCust() {
+    selectedCustomerId = null;
     const el = document.getElementById('selected-customer');
     el.style.display = 'none';
     el.removeAttribute('data-id');
@@ -344,25 +396,24 @@ const Scanner = (() => {
 
   function _onPaymentChange() {
     const payment = document.getElementById('sale-payment').value;
+    saleState.payment = payment;
+    const method = paymentMethods.find(p => p.id === payment);
     const grp = document.getElementById('installments-group');
-    grp.style.display = payment === 'cartao_credito' ? 'block' : 'none';
+    grp.style.display = method?.installments ? 'block' : 'none';
     _updateTotal();
   }
 
-  async function _updateTotal() {
+  function _updateTotal() {
     const subtotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
     const payment = document.getElementById('sale-payment').value;
-    
-    // Busca desconto nas settings
-    const companyId = Auth.getCompanyId();
-    const sSnap = await db.collection('companies').doc(companyId).collection('settings').doc('general').get();
-    const settings = sSnap.exists ? sSnap.data() : { cashDiscount: 5 };
-    
-    let discount = 0;
-    if (payment === 'pix' || payment === 'dinheiro') {
-      discount = subtotal * (settings.cashDiscount / 100);
-    }
+    const method = paymentMethods.find(p => p.id === payment);
 
+    const installmentsEl = document.getElementById('sale-installments');
+    if (installmentsEl) saleState.installments = parseInt(installmentsEl.value) || 1;
+    const originEl = document.getElementById('sale-origin');
+    if (originEl) saleState.origin = originEl.value;
+
+    const discount = subtotal * ((method?.discount || 0) / 100);
     const total = subtotal - discount;
     document.getElementById('sale-subtotal').textContent = UI.money(subtotal);
     document.getElementById('sale-total').textContent = UI.money(total);
@@ -370,9 +421,9 @@ const Scanner = (() => {
 
     const instValEl = document.getElementById('installment-value');
     if (instValEl) {
-      if (payment === 'cartao_credito') {
-        const n = parseInt(document.getElementById('sale-installments')?.value) || 1;
-        instValEl.textContent = n > 1 ? `${n}x de ${UI.money(total / n)}` : 'À vista no cartão';
+      if (method?.installments) {
+        const n = saleState.installments;
+        instValEl.textContent = n > 1 ? `${n}x de ${UI.money(total / n)}` : 'À vista';
       } else {
         instValEl.textContent = '';
       }
@@ -395,7 +446,8 @@ const Scanner = (() => {
         const origin = document.getElementById('sale-origin').value;
         const commissionPct = origin === 'online' ? 10 : 5;
         const commissionVal = total * (commissionPct / 100);
-        const installments = payment === 'cartao_credito' ? (parseInt(document.getElementById('sale-installments')?.value) || 1) : 1;
+        const method = paymentMethods.find(p => p.id === payment);
+        const installments = method?.installments ? (parseInt(document.getElementById('sale-installments')?.value) || 1) : 1;
 
         // Loja de onde o estoque será baixado: a loja vinculada ao vendedor,
         // ou a loja padrão caso o perfil ainda não tenha uma loja atribuída.
@@ -415,6 +467,7 @@ const Scanner = (() => {
           subtotal,
           total,
           paymentMethod: payment,
+          paymentMethodName: method?.name || payment,
           installments,
           installmentValue: installments > 1 ? total / installments : total,
           origin,
@@ -458,6 +511,8 @@ const Scanner = (() => {
         UI.loading(false);
         UI.toast('Venda finalizada com sucesso!', 'success');
         cart = [];
+        selectedCustomerId = null;
+        saleState = { payment: paymentMethods[0]?.id || 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '' };
         // Mostra o recibo de compra (impressão/PDF) assim que a venda fecha.
         // Usa a hora local aqui porque o valor gravado é um FieldValue
         // (carimbo do servidor), que só vira data real depois de recarregado.
@@ -472,5 +527,5 @@ const Scanner = (() => {
     });
   }
 
-  return { render, _searchCust, _selectCust, _clearCust, _openNewCustomer, _saveNewCustomer, _searchProd, _addToCart, _updateQty, _updatePrice, _removeItem, _checkout, _updateTotal, _onPaymentChange, _previewSheet };
+  return { render, _searchCust, _selectCust, _clearCust, _openNewCustomer, _saveNewCustomer, _searchProd, _addToCart, _updateQty, _updatePrice, _removeItem, _checkout, _updateTotal, _onPaymentChange, _previewSheet, _syncField, _clearAll };
 })();

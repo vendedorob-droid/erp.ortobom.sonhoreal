@@ -331,7 +331,7 @@ const Quotes = (() => {
           customerName: q.customerName, customerPhone: q.customerPhone,
           sellerId: q.sellerId, sellerName: q.sellerName,
           items: q.items, total: q.total, status: 'concluido',
-          paymentMethod: 'a_definir', createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          paymentMethod: 'a_definir', paymentMethodName: 'A definir', createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         await db.collection('companies').doc(companyId).collection('quotes').doc(id).update({ status: 'concluido' });
         UI.loading(false); UI.closeModal(); UI.toast('Venda registrada!');

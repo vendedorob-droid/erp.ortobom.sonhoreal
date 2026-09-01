@@ -71,16 +71,33 @@ const Dashboard = (() => {
       startDate.setHours(0,0,0,0);
     }
 
-    unsubscribe = db.collection('companies').doc(companyId).collection('sales')
-      .where('createdAt', '>=', startDate)
-      .orderBy('createdAt', 'desc')
-      .onSnapshot(async (snap) => {
+    // Vendedor só enxerga o próprio faturamento — nunca o total da loja.
+    // Admin, gerente e financeiro continuam vendo tudo (é o que a função
+    // deles exige: gerenciar/conciliar a loja como um todo).
+    const isVendedor = Auth.getRole() === 'vendedor';
+
+    // Para o vendedor, filtramos só por sellerId no Firestore (filtro
+    // simples, nunca exige índice composto) e aplicamos o recorte de
+    // data e a ordenação aqui no código — assim não depende de nenhuma
+    // configuração manual de índice no console do Firebase.
+    const query = isVendedor
+      ? db.collection('companies').doc(companyId).collection('sales').where('sellerId', '==', Auth.getProfileId())
+      : db.collection('companies').doc(companyId).collection('sales').where('createdAt', '>=', startDate).orderBy('createdAt', 'desc');
+
+    unsubscribe = query.onSnapshot(async (snap) => {
         let totalRevenue = 0;
         let totalSales = 0;
         let lastSale = null;
         const dailyData = {};
 
-        snap.forEach(doc => {
+        let docs = snap.docs;
+        if (isVendedor) {
+          docs = docs
+            .filter(doc => { const c = doc.data().createdAt; return c?.toDate && c.toDate() >= startDate; })
+            .sort((a, b) => (b.data().createdAt?.toMillis() || 0) - (a.data().createdAt?.toMillis() || 0));
+        }
+
+        docs.forEach(doc => {
           const d = doc.data();
           totalRevenue += d.total || 0;
           totalSales++;
@@ -91,23 +108,23 @@ const Dashboard = (() => {
           dailyData[dateStr] = (dailyData[dateStr] || 0) + (d.total || 0);
         });
 
-        _renderMetrics(totalRevenue, totalSales, lastSale);
+        _renderMetrics(totalRevenue, totalSales, lastSale, isVendedor);
         _renderChart(dailyData);
         _renderGoal(totalRevenue);
         _renderLastSale(lastSale);
       });
   }
 
-  function _renderMetrics(rev, count, last) {
+  function _renderMetrics(rev, count, last, isVendedor) {
     const el = document.getElementById('dash-metrics');
     el.innerHTML = `
       <div class="dash-metric-hero is-primary">
-        <div class="dm-label">Faturamento Total</div>
+        <div class="dm-label">${isVendedor ? 'Meu Faturamento' : 'Faturamento Total'}</div>
         <div class="dm-value c-accent">${UI.money(rev)}</div>
         <div class="dm-sub">${currentRange === 'day' ? 'VENDAS DE HOJE' : 'NO PERÍODO SELECIONADO'}</div>
       </div>
       <div class="dash-metric-hero">
-        <div class="dm-label">Qtd Vendas</div>
+        <div class="dm-label">${isVendedor ? 'Minhas Vendas' : 'Qtd Vendas'}</div>
         <div class="dm-value">${count}</div>
         <div class="dm-sub">PEDIDOS FINALIZADOS</div>
       </div>
@@ -184,7 +201,7 @@ const Dashboard = (() => {
       <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:var(--surface2); padding:15px; border-radius:12px">
         <div>
           <div style="font-weight:700; font-size:15px">${sale.customerName}</div>
-          <div style="font-size:12px; color:var(--muted)">${UI.date(sale.createdAt)} · ${sale.sellerName} · ${sale.paymentMethod.toUpperCase()}</div>
+          <div style="font-size:12px; color:var(--muted)">${UI.date(sale.createdAt)} · ${sale.sellerName} · ${(sale.paymentMethodName || sale.paymentMethod || '').toUpperCase()}</div>
         </div>
         <div style="text-align:right">
           <div style="font-weight:800; font-size:18px; color:var(--green)">${UI.money(sale.total)}</div>
