@@ -27,24 +27,30 @@ const Scanner = (() => {
                 <button class="btn btn-secondary btn-sm" onclick="Scanner._openNewCustomer()" style="white-space:nowrap">+ Novo Cliente</button>
               </div>
               <div id="sale-cust-results" class="search-dropdown" style="display:none"></div>
-              <div id="selected-customer" class="sale-customer-card" style="display:none">
-                <div class="sale-customer-avatar" id="sel-cust-avatar"></div>
-                <div class="sale-customer-info">
-                  <div class="sale-customer-name" id="sel-cust-name"></div>
-                  <div class="sale-customer-sub" id="sel-cust-info"></div>
-                </div>
-              </div>
             </div>
           </div>
 
-          <div class="card">
+          <div class="card" style="margin-bottom:15px">
             <div class="form-group">
               <label class="form-label">2. Adicionar Produtos</label>
               <input class="form-input" id="sale-prod-search" placeholder="Digite nome, marca ou código..." oninput="Scanner._searchProd(this.value)">
               <div id="sale-prod-results" class="search-dropdown" style="display:none"></div>
             </div>
-            <div id="cart-items" style="margin-top:20px">
-              <div style="text-align:center; padding:40px; color:var(--muted)">O carrinho está vazio.</div>
+          </div>
+
+          <!-- Planilha da Venda: junta cliente + itens num único painel,
+               separado dos campos de busca acima. -->
+          <div class="card">
+            <div class="page-header" style="margin-bottom:14px">
+              <div class="card-title" style="margin:0">📋 Planilha da Venda</div>
+              <button class="btn btn-secondary btn-sm" onclick="Scanner._previewSheet()">👁️ Visualizar</button>
+            </div>
+
+            <div id="selected-customer" class="sale-customer-card" style="display:none; margin-top:0"></div>
+            <div id="sheet-cust-empty" style="text-align:center; padding:16px; color:var(--muted); font-size:13px; background:var(--surface2); border-radius:10px">Nenhum cliente selecionado ainda.</div>
+
+            <div id="cart-items" style="margin-top:16px">
+              <div style="text-align:center; padding:30px; color:var(--muted)">O carrinho está vazio.</div>
             </div>
           </div>
         </div>
@@ -190,13 +196,27 @@ const Scanner = (() => {
     const c = customers.find(x => x.id === id);
     document.getElementById('sale-cust-results').style.display = 'none';
     document.getElementById('sale-cust-search').value = '';
-    const el = document.getElementById('selected-customer');
-    el.style.display = 'block';
-    el.setAttribute('data-id', id);
     const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-    document.getElementById('sel-cust-avatar').textContent = initials;
-    document.getElementById('sel-cust-name').textContent = c.name;
-    document.getElementById('sel-cust-info').textContent = [c.phone, c.address].filter(Boolean).join(' · ') || 'Sem contato cadastrado';
+    const el = document.getElementById('selected-customer');
+    el.setAttribute('data-id', id);
+    el.style.display = 'flex';
+    el.innerHTML = `
+      <div class="sale-customer-avatar">${initials}</div>
+      <div class="sale-customer-info">
+        <div class="sale-customer-name">${c.name}</div>
+        <div class="sale-customer-sub">${[c.phone, c.address].filter(Boolean).join(' · ') || 'Sem contato cadastrado'}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="Scanner._clearCust()" title="Trocar cliente">✕</button>
+    `;
+    document.getElementById('sheet-cust-empty').style.display = 'none';
+  }
+
+  function _clearCust() {
+    const el = document.getElementById('selected-customer');
+    el.style.display = 'none';
+    el.removeAttribute('data-id');
+    el.innerHTML = '';
+    document.getElementById('sheet-cust-empty').style.display = 'block';
   }
 
   function _searchProd(q) {
@@ -273,6 +293,53 @@ const Scanner = (() => {
   function _removeItem(id) {
     cart = cart.filter(x => x.id !== id);
     _renderCart();
+  }
+
+  // Mostra num modal maior exatamente como a Planilha da Venda está agora
+  // (cliente + itens) — útil pra conferir tudo antes de finalizar.
+  function _previewSheet() {
+    const custId = document.getElementById('selected-customer').getAttribute('data-id');
+    const cust = custId ? customers.find(c => c.id === custId) : null;
+    const subtotal = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+
+    UI.modal({
+      title: '📋 Planilha da Venda',
+      size: 'md',
+      body: `
+        ${cust ? `
+          <div class="sale-customer-card" style="margin-top:0">
+            <div class="sale-customer-avatar">${cust.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}</div>
+            <div class="sale-customer-info">
+              <div class="sale-customer-name">${cust.name}</div>
+              <div class="sale-customer-sub">${[cust.phone, cust.address].filter(Boolean).join(' · ') || 'Sem contato cadastrado'}</div>
+            </div>
+          </div>
+        ` : '<div style="text-align:center; color:var(--muted); padding:16px; background:var(--surface2); border-radius:10px">Nenhum cliente selecionado ainda.</div>'}
+
+        ${cart.length ? `
+          <table class="sale-cart-table">
+            <thead><tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Subtotal</th></tr></thead>
+            <tbody>
+              ${cart.map(item => `
+                <tr>
+                  <td>
+                    <div style="display:flex; align-items:center; gap:10px">
+                      <div class="sale-cart-thumb">${item.photoUrl ? `<img src="${item.photoUrl}" onerror="this.parentElement.innerHTML='📦'">` : '📦'}</div>
+                      <div class="sale-cart-name">${item.brand} ${item.model}</div>
+                    </div>
+                  </td>
+                  <td>${item.qty}</td>
+                  <td>${UI.money(item.price)}</td>
+                  <td style="font-weight:800; color:var(--green)">${UI.money(item.price * item.qty)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          <div style="text-align:right; margin-top:14px; font-weight:800; font-size:17px">Subtotal: ${UI.money(subtotal)}</div>
+        ` : '<div style="text-align:center; color:var(--muted); padding:16px; margin-top:14px; background:var(--surface2); border-radius:10px">Nenhum produto adicionado ainda.</div>'}
+      `,
+      actions: [{ label: 'Fechar', cls: 'btn btn-secondary', action: 'UI.closeModal()' }]
+    });
   }
 
   function _onPaymentChange() {
@@ -405,5 +472,5 @@ const Scanner = (() => {
     });
   }
 
-  return { render, _searchCust, _selectCust, _openNewCustomer, _saveNewCustomer, _searchProd, _addToCart, _updateQty, _updatePrice, _removeItem, _checkout, _updateTotal, _onPaymentChange };
+  return { render, _searchCust, _selectCust, _clearCust, _openNewCustomer, _saveNewCustomer, _searchProd, _addToCart, _updateQty, _updatePrice, _removeItem, _checkout, _updateTotal, _onPaymentChange, _previewSheet };
 })();
