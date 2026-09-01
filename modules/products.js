@@ -130,9 +130,17 @@ const Products = (() => {
         <div class="form-group"><label class="form-label">Status</label><select class="form-input" id="f-active"><option value="1" ${p.active!==false?'selected':''}>Ativo</option><option value="0" ${p.active===false?'selected':''}>Inativo</option></select></div>
         <div class="form-group form-full"><label class="form-label">Descrição</label><textarea class="form-input" id="f-desc" rows="2" placeholder="Detalhes adicionais...">${p.description||''}</textarea></div>
         <div class="form-group form-full">
-          <label class="form-label">URL da foto do produto</label>
-          <input class="form-input" id="f-photo-url" value="${p.photoUrl||''}" placeholder="https://... (cole o link da imagem — Google Drive, Imgur, etc.)">
-          <div style="font-size:11px;color:#64748b;margin-top:4px">Cole o link direto de uma imagem hospedada externamente. Upload de arquivos foi removido para manter o plano gratuito.</div>
+          <label class="form-label">Foto do Produto</label>
+          <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap">
+            <img id="f-photo-preview" src="${p.photoUrl || ''}" style="width:64px; height:64px; border-radius:8px; object-fit:cover; background:var(--surface2); flex-shrink:0; ${p.photoUrl ? '' : 'display:none'}" onerror="this.style.display='none'">
+            <div style="flex:1; min-width:220px">
+              <input type="file" accept="image/*" id="f-photo-file" style="display:none">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('f-photo-file').click()">📤 Enviar Imagem</button>
+              <div id="f-photo-progress" style="display:none; font-size:11px; color:var(--muted); margin-top:6px"></div>
+              <input class="form-input" id="f-photo-url" value="${p.photoUrl || ''}" placeholder="ou cole uma URL de imagem" style="margin-top:8px" oninput="document.getElementById('f-photo-preview').src=this.value; document.getElementById('f-photo-preview').style.display=this.value?'block':'none'">
+            </div>
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px">Upload via Cloudinary (configure em Configurações → Imagens). Colar um link de imagem direto também funciona.</div>
         </div>
         <div class="form-group form-full">
           <label class="form-label">Estoque por Loja</label>
@@ -154,6 +162,7 @@ const Products = (() => {
     if (p.brand)      document.getElementById('f-brand').value      = p.brand;
     if (p.technology) document.getElementById('f-tech').value       = p.technology;
     if (p.density)    document.getElementById('f-density').value    = p.density;
+    Cloudinary.bindPicker({ fileInputId: 'f-photo-file', previewId: 'f-photo-preview', urlInputId: 'f-photo-url', progressId: 'f-photo-progress' });
   }
 
   function _calcPrice() {

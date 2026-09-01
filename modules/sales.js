@@ -553,14 +553,40 @@ const Settings = (() => {
             <input class="form-input" id="set-name" placeholder="Ex: Colchoaria do Adson">
           </div>
           <div class="form-group">
-            <label class="form-label">Link da Logo (URL)</label>
-            <input class="form-input" id="set-logo" placeholder="https://...">
+            <label class="form-label">Logo da Empresa</label>
+            <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap">
+              <img id="set-logo-preview" src="" style="width:52px; height:52px; border-radius:8px; object-fit:contain; background:var(--surface2); display:none" onerror="this.style.display='none'">
+              <div>
+                <input type="file" accept="image/*" id="set-logo-file" style="display:none">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('set-logo-file').click()">📤 Enviar Logo</button>
+                <div id="set-logo-progress" style="display:none; font-size:11px; color:var(--muted); margin-top:6px"></div>
+              </div>
+            </div>
+            <input class="form-input" id="set-logo" placeholder="ou cole uma URL de imagem" style="margin-top:8px" oninput="const pv=document.getElementById('set-logo-preview'); pv.src=this.value; pv.style.display=this.value?'block':'none'">
           </div>
           <div class="form-group">
             <label class="form-label">Pasta do Google Drive (Link)</label>
             <input class="form-input" id="set-drive" placeholder="Para fotos de notas e comprovantes">
           </div>
           <button class="btn btn-primary" onclick="Settings._save()">Salvar Empresa</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🖼️ Imagens (Cloudinary)</div>
+          <p style="font-size:12px; color:var(--muted); margin-bottom:14px">
+            Permite enviar fotos de produtos e a logo direto do celular/computador, sem precisar colar link.
+            Crie uma conta grátis em <a href="https://cloudinary.com" target="_blank">cloudinary.com</a> e, no painel,
+            vá em Settings → Upload → Upload presets → Add upload preset → Signing Mode: <b>Unsigned</b>.
+          </p>
+          <div class="form-group">
+            <label class="form-label">Cloud Name</label>
+            <input class="form-input" id="set-cld-name" placeholder="Ex: dxyzabc123">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload Preset (unsigned)</label>
+            <input class="form-input" id="set-cld-preset" placeholder="Ex: colchoeiro_unsigned">
+          </div>
+          <button class="btn btn-primary" onclick="Settings._save()">Salvar Imagens</button>
         </div>
 
         <div class="card">
@@ -582,6 +608,7 @@ const Settings = (() => {
       </div>
     </div>`;
     await _load();
+    Cloudinary.bindPicker({ fileInputId: 'set-logo-file', previewId: 'set-logo-preview', urlInputId: 'set-logo', progressId: 'set-logo-progress' });
   }
 
   async function _load() {
@@ -595,6 +622,12 @@ const Settings = (() => {
       document.getElementById('set-goal').value = config.monthlyGoal || '';
       document.getElementById('set-disc').value = config.cashDiscount || '';
       document.getElementById('set-obs').value = (config.obsSuggestions || []).join('\n');
+      document.getElementById('set-cld-name').value = config.cloudinaryCloudName || '';
+      document.getElementById('set-cld-preset').value = config.cloudinaryUploadPreset || '';
+      if (config.logoUrl) {
+        const pv = document.getElementById('set-logo-preview');
+        pv.src = config.logoUrl; pv.style.display = 'block';
+      }
     }
     if (Auth.hasRole('admin')) {
       document.getElementById('admin-cleanup').style.display = 'block';
@@ -612,9 +645,12 @@ const Settings = (() => {
         monthlyGoal: parseFloat(document.getElementById('set-goal').value) || 0,
         cashDiscount: parseFloat(document.getElementById('set-disc').value) || 0,
         obsSuggestions: document.getElementById('set-obs').value.split('\n').filter(x => x.trim()),
+        cloudinaryCloudName: document.getElementById('set-cld-name').value.trim(),
+        cloudinaryUploadPreset: document.getElementById('set-cld-preset').value.trim(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       };
       await db.collection('companies').doc(companyId).collection('settings').doc('general').set(data, { merge: true });
+      await Cloudinary.getConfig(true); // recarrega o cache com as novas credenciais
       UI.loading(false); UI.toast('Configurações salvas!');
     } catch(err) { UI.loading(false); UI.toast('Erro: ' + err.message, 'error'); }
   }
