@@ -29,11 +29,11 @@ const Brands = (() => {
         <div style="font-size:20px;font-weight:800;letter-spacing:-.03em;margin-bottom:2px">${b.name}</div>
         <div style="font-size:12px;color:#64748b;margin-bottom:14px">${b.productsCount||0} produtos</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-          <div style="background:#1e2030;border-radius:8px;padding:10px 12px">
+          <div style="background:var(--surface3);border-radius:8px;padding:10px 12px">
             <div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:2px">Margem</div>
             <div style="font-size:18px;font-weight:800;color:#10b981">${b.margin||0}%</div>
           </div>
-          <div style="background:#1e2030;border-radius:8px;padding:10px 12px">
+          <div style="background:var(--surface3);border-radius:8px;padding:10px 12px">
             <div style="font-size:10px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:2px">Desc. Máx.</div>
             <div style="font-size:18px;font-weight:800;color:#f59e0b">${b.maxDiscount||0}%</div>
           </div>

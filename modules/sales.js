@@ -345,6 +345,13 @@ const Sales = (() => {
           <div class="form-group"><label class="form-label">Produto (marca / modelo)</label><input class="form-input" id="rep-product" placeholder="Ex: Castor Dream Plus"></div>
           <div class="form-group"><label class="form-label">Cliente</label><input class="form-input" id="rep-customer" placeholder="Nome do cliente"></div>
           <div class="form-group">
+            <label class="form-label">Vendedor</label>
+            <select class="form-input" id="rep-seller">
+              <option value="">Todos os vendedores</option>
+              ${[...new Set(all.map(s => s.sellerName).filter(Boolean))].sort().map(n => `<option value="${n}">${n}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Status</label>
             <select class="form-input" id="rep-status">
               <option value="concluido" selected>Concluídas</option>
@@ -364,6 +371,9 @@ const Sales = (() => {
 
     // Garante que temos as vendas carregadas e o nome/logo da empresa para o cabeçalho impresso
     if (all.length === 0) await _load();
+    // Recarrega a lista de vendedores agora que "all" está garantidamente populado
+    document.getElementById('rep-seller').innerHTML = `<option value="">Todos os vendedores</option>` +
+      [...new Set(all.map(s => s.sellerName).filter(Boolean))].sort().map(n => `<option value="${n}">${n}</option>`).join('');
     try {
       const snap = await db.collection('companies').doc(Auth.getCompanyId()).collection('settings').doc('general').get();
       reportSettings = snap.exists ? snap.data() : {};
@@ -375,6 +385,7 @@ const Sales = (() => {
     const endVal = document.getElementById('rep-end').value;
     const prodTerm = document.getElementById('rep-product').value.trim().toLowerCase();
     const custTerm = document.getElementById('rep-customer').value.trim().toLowerCase();
+    const sellerFilter = document.getElementById('rep-seller').value;
     const statusFilter = document.getElementById('rep-status').value;
 
     let results = all.slice();
@@ -389,6 +400,7 @@ const Sales = (() => {
     }
     if (custTerm) results = results.filter(s => (s.customerName || '').toLowerCase().includes(custTerm));
     if (prodTerm) results = results.filter(s => (s.items || []).some(i => `${i.brand || ''} ${i.model || ''}`.toLowerCase().includes(prodTerm)));
+    if (sellerFilter) results = results.filter(s => s.sellerName === sellerFilter);
 
     results.sort((a, b) => {
       const ta = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
@@ -397,12 +409,13 @@ const Sales = (() => {
     });
 
     reportResults = results;
-    reportFilters = { startVal, endVal, prodTerm, custTerm, statusFilter };
+    reportFilters = { startVal, endVal, prodTerm, custTerm, sellerFilter, statusFilter };
     _renderReport(results);
   }
 
   function _clearReport() {
     ['rep-start', 'rep-end', 'rep-product', 'rep-customer'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('rep-seller').value = '';
     document.getElementById('rep-status').value = 'concluido';
     document.getElementById('rep-summary').innerHTML = '';
     document.getElementById('rep-results').innerHTML = '';
@@ -414,12 +427,40 @@ const Sales = (() => {
     const count = results.length;
     const avg = count ? total / count : 0;
 
+    // Quando nenhum vendedor específico está selecionado, mostra também
+    // um ranking de quanto cada um vendeu no período filtrado.
+    let bySellerHtml = '';
+    if (!reportFilters.sellerFilter && count > 0) {
+      const bySeller = {};
+      results.forEach(s => {
+        const key = s.sellerName || 'Sem vendedor';
+        if (!bySeller[key]) bySeller[key] = { total: 0, count: 0 };
+        bySeller[key].total += s.total || 0;
+        bySeller[key].count++;
+      });
+      const ranked = Object.entries(bySeller).sort((a, b) => b[1].total - a[1].total);
+      bySellerHtml = `
+        <div class="card" style="margin-bottom:20px">
+          <div class="card-title" style="font-size:15px; margin-bottom:12px">👤 Vendas por Vendedor no Período</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            ${ranked.map(([name, d]) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--surface2); border-radius:8px">
+                <span style="font-weight:700; font-size:13px">${name}</span>
+                <span style="font-size:12px; color:var(--muted)">${d.count} venda(s)</span>
+                <span style="font-weight:800; color:var(--green)">${UI.money(d.total)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
+
     document.getElementById('rep-summary').innerHTML = `
       <div class="metric-grid" style="margin-bottom:20px">
         <div class="metric-card"><div class="metric-label">Total do Período</div><div class="metric-value" style="color:var(--green)">${UI.money(total)}</div></div>
         <div class="metric-card"><div class="metric-label">Qtd de Vendas</div><div class="metric-value">${count}</div></div>
         <div class="metric-card"><div class="metric-label">Ticket Médio</div><div class="metric-value">${UI.money(avg)}</div></div>
-      </div>`;
+      </div>
+      ${bySellerHtml}`;
 
     document.getElementById('rep-results').innerHTML = `
       <div class="table-wrap">
@@ -471,7 +512,7 @@ const Sales = (() => {
       <div class="report-doc">
         <h1>${reportSettings.fantasyName || 'Colchoeiro ERP'} — Relatório de Vendas</h1>
         <div class="rp-sub">
-          Período: ${periodStr}${f.custTerm ? ` · Cliente: "${f.custTerm}"` : ''}${f.prodTerm ? ` · Produto: "${f.prodTerm}"` : ''}
+          Período: ${periodStr}${f.custTerm ? ` · Cliente: "${f.custTerm}"` : ''}${f.prodTerm ? ` · Produto: "${f.prodTerm}"` : ''}${f.sellerFilter ? ` · Vendedor: "${f.sellerFilter}"` : ''}
           · Status: ${statusLabel} · Gerado em ${new Date().toLocaleString('pt-BR')}
         </div>
         <div class="rp-summary">

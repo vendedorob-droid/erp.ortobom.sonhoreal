@@ -128,18 +128,17 @@ const Dashboard = (() => {
     const container = document.getElementById('dash-chart-container');
     const entries = Object.entries(data).slice(-7); // Últimos 7 dias com venda
     if (entries.length === 0) {
-      container.innerHTML = '<div style="width:100%; text-align:center; color:var(--muted); align-self:center">Sem dados para exibir no gráfico.</div>';
+      container.innerHTML = '<div style="width:100%; text-align:center; color:var(--muted); grid-column:1/-1; padding:20px 0">Sem dados para exibir no gráfico.</div>';
       return;
     }
     const max = Math.max(...Object.values(data));
     container.innerHTML = entries.map(([date, val]) => {
-      const height = Math.max((val / max) * 100, 3); // altura mínima p/ barra continuar visível/clicável
+      const isTop = max > 0 && val === max;
       return `
-        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0">
-          <div style="width:100%; background:linear-gradient(to top, var(--accent), #8b5cf6); height:${height}%; border-radius:4px; position:relative" title="${UI.money(val)}">
-            <div class="dash-bar-val">${_fmtBarVal(val)}</div>
-          </div>
-          <div class="dash-bar-label">${date}</div>
+        <div class="dash-day-card ${isTop ? 'is-top' : ''}" title="${UI.money(val)}">
+          <div class="dash-day-date">${date}</div>
+          <div class="dash-day-value">${_fmtBarVal(val)}</div>
+          ${isTop ? '<div class="dash-day-badge">🏆 Melhor dia</div>' : ''}
         </div>
       `;
     }).join('');

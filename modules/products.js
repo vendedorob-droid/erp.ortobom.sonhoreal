@@ -66,7 +66,7 @@ const Products = (() => {
     const rows = paged.items.map(p => `
       <tr>
         <td>
-          ${p.photoUrl ? `<img src="${p.photoUrl}" style="width:40px;height:40px;border-radius:6px;object-fit:cover;background:#1e2030" onerror="this.src='https://placehold.co/40x40?text=📦'">` : `<div style="width:40px;height:40px;border-radius:6px;background:#1e2030;display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>`}
+          ${p.photoUrl ? `<div class="prod-thumb-box"><img src="${p.photoUrl}" onerror="this.parentElement.innerHTML='📦'"></div>` : `<div class="prod-thumb-box" style="font-size:18px">📦</div>`}
         </td>
         <td><div style="font-weight:700">${p.brand}</div><div style="font-size:11px;color:#64748b;font-family:monospace">${p.barcode||'—'}</div></td>
         <td style="font-weight:600">${p.model}</td>
@@ -132,7 +132,7 @@ const Products = (() => {
         <div class="form-group form-full">
           <label class="form-label">Foto do Produto</label>
           <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap">
-            <img id="f-photo-preview" src="${p.photoUrl || ''}" style="width:64px; height:64px; border-radius:8px; object-fit:cover; background:var(--surface2); flex-shrink:0; ${p.photoUrl ? '' : 'display:none'}" onerror="this.style.display='none'">
+            <img id="f-photo-preview" src="${p.photoUrl || ''}" style="width:64px; height:64px; border-radius:8px; object-fit:contain; background:var(--surface3); flex-shrink:0; padding:4px; ${p.photoUrl ? '' : 'display:none'}" onerror="this.style.display='none'">
             <div style="flex:1; min-width:220px">
               <input type="file" accept="image/*" id="f-photo-file" style="display:none">
               <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('f-photo-file').click()">📤 Enviar Imagem</button>

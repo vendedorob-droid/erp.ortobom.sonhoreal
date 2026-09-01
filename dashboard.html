@@ -7,6 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="css/main.css"/>
+  <script>
+    // Aplica o tema/paleta salvos ANTES da primeira renderização, pra não
+    // piscar no tema errado por uma fração de segundo ao carregar a página.
+    (function () {
+      var t = localStorage.getItem('colchoeiro_theme') || 'dark';
+      var p = localStorage.getItem('colchoeiro_palette') || 'indigo';
+      document.documentElement.setAttribute('data-theme', t);
+      document.documentElement.setAttribute('data-palette', p);
+    })();
+  </script>
 </head>
 <body>
 <div id="app">
@@ -44,6 +54,23 @@
       </div>
 
       <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
+        <button class="icon-btn" onclick="toggleTheme()" id="theme-toggle-btn" aria-label="Alternar tema claro/escuro" title="Alternar tema claro/escuro">
+          <span id="theme-icon" style="font-size:15px">🌙</span>
+        </button>
+
+        <div style="position:relative">
+          <button class="icon-btn" id="palette-btn" onclick="togglePalettePicker()" aria-label="Paleta de cores" title="Paleta de cores">
+            <span style="font-size:15px">🎨</span>
+          </button>
+          <div id="palette-picker" style="display:none; position:absolute; right:0; top:42px; background:var(--surface); border:1px solid var(--border2); border-radius:12px; padding:10px; gap:8px; z-index:500; box-shadow:0 10px 30px rgba(0,0,0,.3)">
+            <button class="palette-dot" data-palette="indigo" style="background:#6366f1" onclick="applyPalette('indigo')" title="Índigo"></button>
+            <button class="palette-dot" data-palette="blue" style="background:#3b82f6" onclick="applyPalette('blue')" title="Azul"></button>
+            <button class="palette-dot" data-palette="green" style="background:#10b981" onclick="applyPalette('green')" title="Verde"></button>
+            <button class="palette-dot" data-palette="rose" style="background:#f43f5e" onclick="applyPalette('rose')" title="Rosa"></button>
+            <button class="palette-dot" data-palette="orange" style="background:#f97316" onclick="applyPalette('orange')" title="Laranja"></button>
+          </div>
+        </div>
+
         <div style="position:relative">
           <button class="icon-btn" onclick="loadModule('notifications')" aria-label="Notificações">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
@@ -53,7 +80,7 @@
 
         <div style="position:relative">
           <div class="avatar avatar-md" id="topbar-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);cursor:pointer" onclick="toggleUserMenu()">?</div>
-          <div id="user-menu" style="display:none;position:absolute;right:0;top:42px;background:#171924;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px;min-width:160px;z-index:500">
+          <div id="user-menu" style="display:none;position:absolute;right:0;top:42px;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:6px;min-width:160px;z-index:500">
             <button class="nav-item" style="width:100%" onclick="loadModule('profile')">
               <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"/></svg>
               <span>Meu perfil</span>
@@ -276,6 +303,31 @@ function toggleUserMenu() {
   m.style.display = m.style.display === 'none' ? 'block' : 'none';
 }
 
+// ── Tema (claro/escuro) e Paleta de cores ────────────────────
+// O atributo já foi setado antes do primeiro paint (ver <head>);
+// aqui só sincronizamos o ícone/bolinha ativa e cuidamos da troca.
+function applyTheme(theme, persist = true) {
+  document.documentElement.setAttribute('data-theme', theme);
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.textContent = theme === 'light' ? '☀️' : '🌙';
+  if (persist) localStorage.setItem('colchoeiro_theme', theme);
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+function applyPalette(palette, persist = true) {
+  document.documentElement.setAttribute('data-palette', palette);
+  document.querySelectorAll('.palette-dot').forEach(d => d.classList.toggle('active', d.getAttribute('data-palette') === palette));
+  if (persist) localStorage.setItem('colchoeiro_palette', palette);
+}
+function togglePalettePicker() {
+  const el = document.getElementById('palette-picker');
+  el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
+}
+applyTheme(localStorage.getItem('colchoeiro_theme') || 'dark', false);
+applyPalette(localStorage.getItem('colchoeiro_palette') || 'indigo', false);
+
 function handleSwitchProfile() {
   document.getElementById('user-menu').style.display = 'none';
   let pin = '';
@@ -331,6 +383,10 @@ function handleSwitchProfile() {
 document.addEventListener('click', e => {
   if (!e.target.closest('#topbar-avatar') && !e.target.closest('#user-menu')) {
     document.getElementById('user-menu').style.display = 'none';
+  }
+  if (!e.target.closest('#palette-btn') && !e.target.closest('#palette-picker')) {
+    const pp = document.getElementById('palette-picker');
+    if (pp) pp.style.display = 'none';
   }
 });
 

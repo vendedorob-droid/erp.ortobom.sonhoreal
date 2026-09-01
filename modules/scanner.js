@@ -27,9 +27,12 @@ const Scanner = (() => {
                 <button class="btn btn-secondary btn-sm" onclick="Scanner._openNewCustomer()" style="white-space:nowrap">+ Novo Cliente</button>
               </div>
               <div id="sale-cust-results" class="search-dropdown" style="display:none"></div>
-              <div id="selected-customer" style="margin-top:10px; display:none; padding:10px; background:var(--surface2); border-radius:8px; border-left:4px solid var(--primary)">
-                <div style="font-weight:700" id="sel-cust-name"></div>
-                <div style="font-size:12px; color:var(--muted)" id="sel-cust-info"></div>
+              <div id="selected-customer" class="sale-customer-card" style="display:none">
+                <div class="sale-customer-avatar" id="sel-cust-avatar"></div>
+                <div class="sale-customer-info">
+                  <div class="sale-customer-name" id="sel-cust-name"></div>
+                  <div class="sale-customer-sub" id="sel-cust-info"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -190,8 +193,10 @@ const Scanner = (() => {
     const el = document.getElementById('selected-customer');
     el.style.display = 'block';
     el.setAttribute('data-id', id);
+    const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    document.getElementById('sel-cust-avatar').textContent = initials;
     document.getElementById('sel-cust-name').textContent = c.name;
-    document.getElementById('sel-cust-info').textContent = `${c.phone||''} · ${c.address||''}`;
+    document.getElementById('sel-cust-info').textContent = [c.phone, c.address].filter(Boolean).join(' · ') || 'Sem contato cadastrado';
   }
 
   function _searchProd(q) {
@@ -223,20 +228,33 @@ const Scanner = (() => {
       return;
     }
 
-    container.innerHTML = cart.map((item, idx) => `
-      <div class="cart-item" style="display:grid; grid-template-columns: 50px 1fr 100px 40px; gap:12px; align-items:center; padding:12px; background:var(--surface2); border-radius:10px; margin-bottom:10px">
-        <img src="${item.photoUrl||'https://placehold.co/50x50?text=📦'}" style="width:50px; height:50px; border-radius:6px; object-fit:cover">
-        <div>
-          <div style="font-weight:700; font-size:14px">${item.brand} ${item.model}</div>
-          <div style="font-size:11px; color:var(--muted)">Preço sugerido: ${UI.money(item.originalPrice)}</div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:4px">
-          <input type="number" class="form-input" style="padding:4px; text-align:center" value="${item.qty}" onchange="Scanner._updateQty('${item.id}', this.value)">
-          <input type="number" class="form-input" style="padding:4px; text-align:right; font-weight:700" value="${item.price}" onchange="Scanner._updatePrice('${item.id}', this.value)">
-        </div>
-        <button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="Scanner._removeItem('${item.id}')">✕</button>
-      </div>
-    `).join('');
+    container.innerHTML = `
+    <table class="sale-cart-table">
+      <thead>
+        <tr><th>Produto</th><th>Qtd</th><th>Preço</th><th>Subtotal</th><th></th></tr>
+      </thead>
+      <tbody>
+        ${cart.map(item => `
+          <tr>
+            <td>
+              <div style="display:flex; align-items:center; gap:10px">
+                <div class="sale-cart-thumb">
+                  ${item.photoUrl ? `<img src="${item.photoUrl}" onerror="this.parentElement.innerHTML='📦'">` : '📦'}
+                </div>
+                <div>
+                  <div class="sale-cart-name">${item.brand} ${item.model}</div>
+                  <div class="sale-cart-sub">Sugerido: ${UI.money(item.originalPrice)}</div>
+                </div>
+              </div>
+            </td>
+            <td><input type="number" class="form-input" min="1" value="${item.qty}" onchange="Scanner._updateQty('${item.id}', this.value)"></td>
+            <td><input type="number" class="form-input" step="0.01" value="${item.price}" onchange="Scanner._updatePrice('${item.id}', this.value)"></td>
+            <td style="font-weight:800; color:var(--green); white-space:nowrap">${UI.money(item.price * item.qty)}</td>
+            <td><button class="btn btn-ghost btn-sm" style="color:var(--red)" onclick="Scanner._removeItem('${item.id}')">✕</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
     _updateTotal();
   }
 
