@@ -14,7 +14,7 @@ const Scanner = (() => {
   // por isso sobrevive quando o vendedor sai pra outra aba e volta. Só é
   // zerado ao finalizar a venda ou clicar em "Limpar Informações".
   let selectedCustomerId = null;
-  let saleState = { payment: 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '', obs: '' };
+  let saleState = { payment: 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '', obs: '', date: '' };
 
   // Mesma lista padrão usada em Configurações — ids fixos para compatibilidade
   // com vendas antigas e pra bater com o que Configurações mostra por padrão.
@@ -133,6 +133,10 @@ const Scanner = (() => {
               <input class="form-input" id="ent-apt" value="${saleState.apartment}" oninput="Scanner._syncField('apartment', this.value)" placeholder="Ex: 1202">
             </div>
             <div class="form-group">
+              <label class="form-label">Data da entrega / saída</label>
+              <input class="form-input" type="date" id="ent-date" value="${saleState.date || ''}" oninput="Scanner._syncField('date', this.value)">
+            </div>
+            <div class="form-group">
               <label class="form-label">Observação do cliente (sai no comprovante)</label>
               <input class="form-input" id="ent-obs" value="${saleState.obs || ''}" oninput="Scanner._syncField('obs', this.value)" placeholder="Ex: Entregar depois das 18h">
             </div>
@@ -161,7 +165,7 @@ const Scanner = (() => {
     UI.confirm('Limpar cliente, produtos, pagamento e entrega desta venda?', () => {
       cart = [];
       selectedCustomerId = null;
-      saleState = { payment: 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '', obs: '' };
+      saleState = { payment: 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '', obs: '', date: '' };
       loadModule('scanner');
       UI.toast('Informações limpas.', 'success');
     }, 'Limpar', true);
@@ -485,6 +489,7 @@ const Scanner = (() => {
             block: document.getElementById('ent-block').value,
             floor: document.getElementById('ent-floor').value,
             apartment: document.getElementById('ent-apt').value,
+            date: document.getElementById('ent-date')?.value || '',
           },
           obs: document.getElementById('ent-obs')?.value.trim() || '',
           sellerId: Auth.getProfileId(),
@@ -540,7 +545,7 @@ const Scanner = (() => {
         UI.toast('Venda finalizada com sucesso!', 'success');
         cart = [];
         selectedCustomerId = null;
-        saleState = { payment: paymentMethods[0]?.id || 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '', obs: '' };
+        saleState = { payment: paymentMethods[0]?.id || 'pix', installments: 1, origin: 'loja', building: '', block: '', floor: '', apartment: '', obs: '', date: '' };
         // Mostra o recibo de compra (impressão/PDF) assim que a venda fecha.
         // Usa a hora local aqui porque o valor gravado é um FieldValue
         // (carimbo do servidor), que só vira data real depois de recarregado.

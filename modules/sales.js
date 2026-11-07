@@ -632,6 +632,37 @@ const Settings = (() => {
           <button class="btn btn-danger" style="width:100%; margin-top:10px; background:#ef4444" onclick="Settings._cleanup()">Zerar Todo o Sistema</button>
         </div>
 
+        <div class="card" style="grid-column:1/-1">
+          <div class="card-title">🧾 Dados do Comprovante do Pedido (PI)</div>
+          <p style="font-size:12px; color:var(--muted); margin-bottom:14px">Preencha uma vez: estes dados saem automaticamente em todos os comprovantes, no mesmo modelo da nota. Deixe em branco o que quiser preencher à mão.</p>
+          <div class="form-grid">
+            <div class="form-group form-full"><label class="form-label">Razão Social</label><input class="form-input" id="set-legal" placeholder="Ex: Colchoaria e Distribuidora Sonho Real"></div>
+            <div class="form-group"><label class="form-label">CNPJ</label><input class="form-input" id="set-cnpj"></div>
+            <div class="form-group"><label class="form-label">Inscrição Estadual</label><input class="form-input" id="set-ie"></div>
+            <div class="form-group form-full"><label class="form-label">Endereço da Loja</label><input class="form-input" id="set-addr" placeholder="Av. Exemplo, 100 - Centro - Cidade - UF"></div>
+            <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input class="form-input" id="set-phone"></div>
+            <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="set-email"></div>
+            <div class="form-group"><label class="form-label">Natureza da Operação</label><input class="form-input" id="set-nature" placeholder="VENDA"></div>
+            <div class="form-group"><label class="form-label">Inscrição Estadual do Subst. Trib.</label><input class="form-input" id="set-iest"></div>
+          </div>
+          <div style="font-weight:800; font-size:13px; margin:12px 0 8px">🚚 Transportador / Volumes (padrão)</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Nome / Razão Social</label><input class="form-input" id="set-c-name"></div>
+            <div class="form-group"><label class="form-label">Frete por conta</label><input class="form-input" id="set-c-freight" placeholder="Ex: Emitente / Destinatário"></div>
+            <div class="form-group"><label class="form-label">CNPJ / CPF</label><input class="form-input" id="set-c-doc"></div>
+            <div class="form-group"><label class="form-label">Placa do Veículo</label><input class="form-input" id="set-c-plate"></div>
+            <div class="form-group"><label class="form-label">UF</label><input class="form-input" id="set-c-uf"></div>
+            <div class="form-group"><label class="form-label">Cód. ANTT</label><input class="form-input" id="set-c-antt"></div>
+            <div class="form-group form-full"><label class="form-label">Endereço</label><input class="form-input" id="set-c-addr"></div>
+            <div class="form-group"><label class="form-label">Município</label><input class="form-input" id="set-c-city"></div>
+            <div class="form-group"><label class="form-label">Fone</label><input class="form-input" id="set-c-phone"></div>
+            <div class="form-group"><label class="form-label">Espécie</label><input class="form-input" id="set-c-species"></div>
+            <div class="form-group"><label class="form-label">Marca</label><input class="form-input" id="set-c-brand"></div>
+          </div>
+          <div class="form-group" style="margin-top:12px"><label class="form-label">Observação do produto (garantia / avisos do rodapé)</label><textarea class="form-input" id="set-terms" rows="5" placeholder="ATENÇÃO: Garantia conforme etiqueta do produto..."></textarea></div>
+          <button class="btn btn-primary" onclick="Settings._save()">Salvar Dados do Comprovante</button>
+        </div>
+
         <div class="card">
           <div class="card-title">Empresa e Identidade</div>
           <div class="form-group">
@@ -650,17 +681,6 @@ const Settings = (() => {
             </div>
             <input class="form-input" id="set-logo" placeholder="ou cole uma URL de imagem" style="margin-top:8px" oninput="const pv=document.getElementById('set-logo-preview'); pv.src=this.value; pv.style.display=this.value?'block':'none'">
           </div>
-          <div class="form-group"><label class="form-label">Razão Social (comprovante)</label><input class="form-input" id="set-legal" placeholder="Ex: Colchoaria e Distribuidora Sonho Real"></div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-            <div class="form-group"><label class="form-label">CNPJ</label><input class="form-input" id="set-cnpj"></div>
-            <div class="form-group"><label class="form-label">Inscrição Estadual</label><input class="form-input" id="set-ie"></div>
-          </div>
-          <div class="form-group"><label class="form-label">Endereço da Loja</label><input class="form-input" id="set-addr" placeholder="Av. Exemplo, 100 - Centro - Cidade - UF"></div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
-            <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input class="form-input" id="set-phone"></div>
-            <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="set-email"></div>
-          </div>
-          <div class="form-group"><label class="form-label">Texto de garantia / avisos (rodapé do comprovante)</label><textarea class="form-input" id="set-terms" rows="4" placeholder="Ex: Garantia conforme etiqueta do produto..."></textarea></div>
           <div class="form-group">
             <label class="form-label">Pasta do Google Drive (Link)</label>
             <input class="form-input" id="set-drive" placeholder="Para fotos de notas e comprovantes">
@@ -720,7 +740,7 @@ const Settings = (() => {
       document.getElementById('set-name').value = config.fantasyName || '';
       document.getElementById('set-logo').value = config.logoUrl || '';
       document.getElementById('set-drive').value = config.driveUrl || '';
-      [['legal','legalName'],['cnpj','cnpj'],['ie','ie'],['addr','address'],['phone','phone'],['email','email'],['terms','receiptTerms']]
+      [['legal','legalName'],['cnpj','cnpj'],['ie','ie'],['addr','address'],['phone','phone'],['email','email'],['terms','receiptTerms'],['nature','natureOp'],['iest','ieSubst'],['c-name','carrierName'],['c-freight','carrierFreight'],['c-doc','carrierDoc'],['c-plate','carrierPlate'],['c-uf','carrierUf'],['c-antt','carrierAntt'],['c-addr','carrierAddress'],['c-city','carrierCity'],['c-phone','carrierPhone'],['c-species','carrierSpecies'],['c-brand','carrierBrand']]
         .forEach(([id,k]) => { document.getElementById('set-'+id).value = config[k] || ''; });
       document.getElementById('set-goal').value = config.monthlyGoal || '';
       document.getElementById('set-obs').value = (config.obsSuggestions || []).join('\n');
@@ -793,6 +813,8 @@ const Settings = (() => {
         phone: document.getElementById('set-phone').value.trim(),
         email: document.getElementById('set-email').value.trim(),
         receiptTerms: document.getElementById('set-terms').value.trim(),
+        ...Object.fromEntries([['nature','natureOp'],['iest','ieSubst'],['c-name','carrierName'],['c-freight','carrierFreight'],['c-doc','carrierDoc'],['c-plate','carrierPlate'],['c-uf','carrierUf'],['c-antt','carrierAntt'],['c-addr','carrierAddress'],['c-city','carrierCity'],['c-phone','carrierPhone'],['c-species','carrierSpecies'],['c-brand','carrierBrand']]
+          .map(([id,k]) => [k, document.getElementById('set-'+id).value.trim()])),
         monthlyGoal: parseFloat(document.getElementById('set-goal').value) || 0,
         obsSuggestions: document.getElementById('set-obs').value.split('\n').filter(x => x.trim()),
         cloudinaryCloudName: document.getElementById('set-cld-name').value.trim(),

@@ -100,6 +100,7 @@ const Receipt = (() => {
     const complement = [d.building, d.block && 'Quadra ' + d.block, d.floor && 'Andar ' + d.floor, d.apartment && 'Apto ' + d.apartment].filter(Boolean).join(' · ');
     const payName = (s.paymentMethodName || (s.paymentMethod || '').replace(/_/g, ' ')).toUpperCase();
     const payDetail = s.installments > 1 ? `${s.installments}x de ${m(s.installmentValue || s.total / s.installments)}` : 'À VISTA';
+    const dDate = d.date ? d.date.split('-').reverse().join('/') : '';
     const legal = company.legalName || company.fantasyName || 'Colchoeiro ERP';
     const terms = company.receiptTerms || '';
     const cell = (label, value, extra = '') => `<td class="rc-c" ${extra}><div class="rc-l">${label}</div><div class="rc-v">${esc(value) || '&nbsp;'}</div></td>`;
@@ -150,8 +151,8 @@ const Receipt = (() => {
       </tr></table>
 
       <table style="margin-top:4px"><tr>
-        ${cell('Natureza da operação', 'VENDA', 'style="width:30%"')}
-        ${cell('Loja', s.storeName || '', 'style="width:30%"')}
+        ${cell('Natureza da operação', company.natureOp || 'VENDA', 'style="width:30%"')}
+        ${cell('Inscrição estadual do subst. trib.', company.ieSubst || '', 'style="width:30%"')}
         ${cell('Data/hora da emissão', dateTime)}
       </tr></table>
       <table><tr>
@@ -162,13 +163,13 @@ const Receipt = (() => {
 
       <div class="rc-sec">Destinatário</div>
       <table>
-        <tr>${cell('Nome / Razão social', s.customerName || '', 'style="width:68%"')}${cell('CNPJ / CPF', s.customerDocument || '')}</tr>
+        <tr>${cell('Nome / Razão social', s.customerName || '', 'style="width:52%"')}${cell('CNPJ / CPF', s.customerDocument || '', 'style="width:24%"')}${cell('Data da entrega / saída', dDate)}</tr>
       </table>
       <table>
         <tr>${cell('Endereço', s.customerAddress || '', 'style="width:45%"')}${cell('Bairro / Distrito', s.customerNeighborhood || '', 'style="width:30%"')}${cell('CEP', s.customerCep || '')}</tr>
       </table>
       <table>
-        <tr>${cell('Município / UF', s.customerCity || '', 'style="width:45%"')}${cell('Fone', s.customerPhone || '', 'style="width:30%"')}${cell('Complemento da entrega', complement)}</tr>
+        <tr>${cell('Município / UF', s.customerCity || '', 'style="width:45%"')}${cell('Fone', s.customerPhone || '', 'style="width:30%"')}</tr>
       </table>
 
       <div class="rc-sec">Forma de pagamento</div>
@@ -188,7 +189,18 @@ const Receipt = (() => {
         </tr>
       </table>
 
-      <div class="rc-sec">Dados do produto / serviço &nbsp;·&nbsp; Qtd de itens: ${String(qtyTotal).padStart(5, '0')}</div>
+      <div class="rc-sec">Transportador / Volumes transportados</div>
+      <table>
+        <tr>${cell('Nome / Razão social', company.carrierName || '', 'style="width:40%"')}${cell('Frete por conta', company.carrierFreight || '', 'style="width:20%"')}${cell('Placa veículo', company.carrierPlate || '', 'style="width:14%"')}${cell('UF', company.carrierUf || '', 'style="width:8%"')}${cell('CNPJ / CPF', company.carrierDoc || '')}</tr>
+      </table>
+      <table>
+        <tr>${cell('Endereço', company.carrierAddress || '', 'style="width:36%"')}${cell('Município', company.carrierCity || '', 'style="width:22%"')}${cell('Cód. ANTT', company.carrierAntt || '', 'style="width:14%"')}${cell('Fone', company.carrierPhone || '')}</tr>
+      </table>
+      <table>
+        <tr>${cell('Qtd de itens', String(qtyTotal).padStart(5, '0'), 'style="width:14%"')}${cell('Espécie', company.carrierSpecies || '', 'style="width:18%"')}${cell('Marca', company.carrierBrand || '', 'style="width:18%"')}${cell('Numeração', '', 'style="width:16%"')}${cell('Peso bruto', '', 'style="width:17%"')}${cell('Peso líquido', '')}</tr>
+      </table>
+
+      <div class="rc-sec">Dados do produto / serviço</div>
       <table class="rc-items">
         <thead><tr>
           <th style="width:14%">Código</th><th>Discriminação do produto / serviço</th>
