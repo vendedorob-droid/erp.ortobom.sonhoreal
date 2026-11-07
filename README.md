@@ -97,7 +97,7 @@ automaticamente o perfil de Administrador com esse PIN.
 
 **Troque esse PIN padrão assim que possível** em Meu Perfil → Alterar meu PIN.
 
-### 4. Criar o documento da empresa
+### 4. (Opcional) Documento da empresa — o nome da loja pode ser definido em Configurações
 1. No Firestore, **Iniciar coleção** → `companies`
 2. ID do documento: `empresa-001`
 3. Dentro dele, crie a subcoleção `settings` → documento `general` com o campo

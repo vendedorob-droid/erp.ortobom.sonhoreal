@@ -636,7 +636,7 @@ const Settings = (() => {
           <div class="card-title">Empresa e Identidade</div>
           <div class="form-group">
             <label class="form-label">Nome Fantasia</label>
-            <input class="form-input" id="set-name" placeholder="Ex: Colchoaria do Adson">
+            <input class="form-input" id="set-name" placeholder="Ex: Nome da sua loja">
           </div>
           <div class="form-group">
             <label class="form-label">Logo da Empresa</label>

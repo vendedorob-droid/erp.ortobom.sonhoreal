@@ -8,12 +8,12 @@
 // ============================================================
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDbB66cIkRXb04Fs4vS4dF1qexzhws4qy4",
-  authDomain: "meucolchoeiro.firebaseapp.com",
-  projectId: "meucolchoeiro",
-  storageBucket: "meucolchoeiro.firebasestorage.app",
-  messagingSenderId: "647580491363",
-  appId: "1:647580491363:web:20c34ad9b982faf0472256"
+  apiKey: "COLE_AQUI_SUA_API_KEY",
+  authDomain: "SEU-PROJETO.firebaseapp.com",
+  projectId: "SEU-PROJETO",
+  storageBucket: "SEU-PROJETO.firebasestorage.app",
+  messagingSenderId: "COLE_AQUI",
+  appId: "COLE_AQUI"
 };
 
 // Inicializa Firebase
