@@ -636,7 +636,7 @@ const Settings = (() => {
           <div class="card-title">Empresa e Identidade</div>
           <div class="form-group">
             <label class="form-label">Nome Fantasia</label>
-            <input class="form-input" id="set-name" placeholder="Ex: Colchoaria do Adson">
+            <input class="form-input" id="set-name" placeholder="Ex: Nome da sua loja">
           </div>
           <div class="form-group">
             <label class="form-label">Logo da Empresa</label>
@@ -650,6 +650,17 @@ const Settings = (() => {
             </div>
             <input class="form-input" id="set-logo" placeholder="ou cole uma URL de imagem" style="margin-top:8px" oninput="const pv=document.getElementById('set-logo-preview'); pv.src=this.value; pv.style.display=this.value?'block':'none'">
           </div>
+          <div class="form-group"><label class="form-label">Razão Social (comprovante)</label><input class="form-input" id="set-legal" placeholder="Ex: Colchoaria e Distribuidora Sonho Real"></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <div class="form-group"><label class="form-label">CNPJ</label><input class="form-input" id="set-cnpj"></div>
+            <div class="form-group"><label class="form-label">Inscrição Estadual</label><input class="form-input" id="set-ie"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Endereço da Loja</label><input class="form-input" id="set-addr" placeholder="Av. Exemplo, 100 - Centro - Cidade - UF"></div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input class="form-input" id="set-phone"></div>
+            <div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="set-email"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Texto de garantia / avisos (rodapé do comprovante)</label><textarea class="form-input" id="set-terms" rows="4" placeholder="Ex: Garantia conforme etiqueta do produto..."></textarea></div>
           <div class="form-group">
             <label class="form-label">Pasta do Google Drive (Link)</label>
             <input class="form-input" id="set-drive" placeholder="Para fotos de notas e comprovantes">
@@ -709,6 +720,8 @@ const Settings = (() => {
       document.getElementById('set-name').value = config.fantasyName || '';
       document.getElementById('set-logo').value = config.logoUrl || '';
       document.getElementById('set-drive').value = config.driveUrl || '';
+      [['legal','legalName'],['cnpj','cnpj'],['ie','ie'],['addr','address'],['phone','phone'],['email','email'],['terms','receiptTerms']]
+        .forEach(([id,k]) => { document.getElementById('set-'+id).value = config[k] || ''; });
       document.getElementById('set-goal').value = config.monthlyGoal || '';
       document.getElementById('set-obs').value = (config.obsSuggestions || []).join('\n');
       document.getElementById('set-cld-name').value = config.cloudinaryCloudName || '';
@@ -773,6 +786,13 @@ const Settings = (() => {
         fantasyName: document.getElementById('set-name').value,
         logoUrl: document.getElementById('set-logo').value,
         driveUrl: document.getElementById('set-drive').value,
+        legalName: document.getElementById('set-legal').value.trim(),
+        cnpj: document.getElementById('set-cnpj').value.trim(),
+        ie: document.getElementById('set-ie').value.trim(),
+        address: document.getElementById('set-addr').value.trim(),
+        phone: document.getElementById('set-phone').value.trim(),
+        email: document.getElementById('set-email').value.trim(),
+        receiptTerms: document.getElementById('set-terms').value.trim(),
         monthlyGoal: parseFloat(document.getElementById('set-goal').value) || 0,
         obsSuggestions: document.getElementById('set-obs').value.split('\n').filter(x => x.trim()),
         cloudinaryCloudName: document.getElementById('set-cld-name').value.trim(),
