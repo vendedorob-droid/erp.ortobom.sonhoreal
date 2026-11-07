@@ -169,7 +169,7 @@ const Receipt = (() => {
         <tr>${cell('Endereço', s.customerAddress || '', 'style="width:45%"')}${cell('Bairro / Distrito', s.customerNeighborhood || '', 'style="width:30%"')}${cell('CEP', s.customerCep || '')}</tr>
       </table>
       <table>
-        <tr>${cell('Município / UF', s.customerCity || '', 'style="width:45%"')}${cell('Fone', s.customerPhone || '', 'style="width:30%"')}</tr>
+        <tr>${cell('Município / UF', s.customerCity || '', 'style="width:45%"')}${cell('Fone', s.customerPhone || '', 'style="width:30%"')}${cell('Complemento da entrega', complement)}</tr>
       </table>
 
       <div class="rc-sec">Forma de pagamento</div>
