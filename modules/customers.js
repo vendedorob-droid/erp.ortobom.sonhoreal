@@ -98,7 +98,11 @@ const Customers = (() => {
         <div class="form-group"><label class="form-label">Nome Completo</label><input class="form-input" id="c-name" value="${c.name||''}" placeholder="Ex: João Silva"></div>
         <div class="form-group"><label class="form-label">Celular / WhatsApp</label><input class="form-input" id="c-phone" value="${c.phone||''}" placeholder="(11) 99999-9999"></div>
         <div class="form-group"><label class="form-label">Data de Nascimento</label><input class="form-input" type="date" id="c-bday" value="${c.birthDate||''}"></div>
-        <div class="form-group form-full"><label class="form-label">Endereço</label><input class="form-input" id="c-address" value="${c.address||''}" placeholder="Rua, número, bairro..."></div>
+        <div class="form-group"><label class="form-label">CPF / CNPJ</label><input class="form-input" id="c-doc" value="${c.document||''}"></div>
+        <div class="form-group"><label class="form-label">CEP</label><input class="form-input" id="c-cep" value="${c.cep||''}"></div>
+        <div class="form-group form-full"><label class="form-label">Endereço</label><input class="form-input" id="c-address" value="${c.address||''}" placeholder="Rua, número..."></div>
+        <div class="form-group"><label class="form-label">Bairro</label><input class="form-input" id="c-hood" value="${c.neighborhood||''}"></div>
+        <div class="form-group"><label class="form-label">Cidade / UF</label><input class="form-input" id="c-city" value="${c.city||''}" placeholder="Manaus / AM"></div>
       </div>`,
       actions: [
         { label: 'Cancelar', cls: 'btn btn-secondary', action: 'UI.closeModal()' },
@@ -116,6 +120,10 @@ const Customers = (() => {
       phone: document.getElementById('c-phone').value.trim(),
       birthDate: document.getElementById('c-bday').value,
       address: document.getElementById('c-address').value.trim(),
+      document: document.getElementById('c-doc').value.trim(),
+      cep: document.getElementById('c-cep').value.trim(),
+      neighborhood: document.getElementById('c-hood').value.trim(),
+      city: document.getElementById('c-city').value.trim(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
