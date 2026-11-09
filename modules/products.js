@@ -114,6 +114,15 @@ const Products = (() => {
       title: product ? 'Editar Produto' : 'Novo Produto',
       size: 'lg',
       body: `
+      ${typeof CATALOGO_ORTOBOM !== 'undefined' && !product ? `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px">📚 Buscar no catálogo Ortobom <span style="font-weight:400;color:var(--muted)">(preenche modelo, tecnologia, densidade, medidas, altura, foto e descrição)</span></div>
+        <div class="form-grid form-grid-2">
+          <div class="form-group"><input class="form-input" id="cat-busca" placeholder="Digite o nome do modelo (ex.: Airtech, Exclusive, Orthotel)" oninput="Products._catFiltrar(this.value)" list="cat-lista" autocomplete="off">
+            <datalist id="cat-lista">${CATALOGO_ORTOBOM.map(c => `<option value="${c.modelo}">${c.linha}</option>`).join('')}</datalist></div>
+          <div class="form-group"><select class="form-input" id="cat-medida" onchange="Products._catAplicar()"><option value="">Escolha o modelo primeiro</option></select></div>
+        </div>
+      </div>` : ''}
       <div class="form-grid form-grid-2">
         <div class="form-group"><label class="form-label">Código de barras (EAN)</label><input class="form-input" id="f-barcode" value="${p.barcode||''}" placeholder="7891234560001" style="font-family:monospace"></div>
         <div class="form-group"><label class="form-label">Marca</label><select class="form-input" id="f-brand"><option>Castor</option><option>Probel</option><option>Ortobom</option><option>Sealy</option><option>Anjos</option></select></div>
@@ -268,5 +277,48 @@ const Products = (() => {
     }, 'Excluir', true);
   }
 
-  return { render, _filter, _search, _goPage, _openForm, _calcPrice, _save, _delete };
+
+  // ---------- Catálogo Ortobom ----------
+  let _catModelo = null;
+  const _fmtM = cm => (cm / 100).toFixed(2).replace('.', ',');
+  function _catFiltrar(txt) {
+    const t = (txt || '').trim().toLowerCase();
+    _catModelo = CATALOGO_ORTOBOM.find(c => c.modelo.toLowerCase() === t) || null;
+    const sel = document.getElementById('cat-medida');
+    if (!sel) return;
+    if (!_catModelo) { sel.innerHTML = '<option value="">Escolha o modelo primeiro</option>'; return; }
+    const meds = _catModelo.medidas || [];
+    sel.innerHTML = '<option value="">Medida…</option>' +
+      meds.map((m, i) => `<option value="${i}">${m.nome ? m.nome + ' · ' : ''}${_fmtM(m.l)} x ${_fmtM(m.c)} m</option>`).join('') +
+      '<option value="-1">Sem medida / digitar depois</option>';
+    if (!meds.length) { sel.value = '-1'; _catAplicar(); }
+  }
+  function _setSel(id, val) {
+    const el = document.getElementById(id);
+    if (!el || !val) return;
+    if (![...el.options].some(o => o.value === val || o.text === val)) el.add(new Option(val, val));
+    el.value = val;
+  }
+  function _catAplicar() {
+    const c = _catModelo; if (!c) return;
+    const i = parseInt(document.getElementById('cat-medida').value);
+    if (isNaN(i)) return;
+    const m = i >= 0 ? c.medidas[i] : null;
+    _setSel('f-brand', 'Ortobom');
+    document.getElementById('f-model').value = c.modelo + (m && m.nome ? ' ' + m.nome : '') + (m ? ` ${m.l}x${m.c}` : '');
+    _setSel('f-tech', c.tecnologia);
+    _setSel('f-density', c.densidade);
+    if (m) document.getElementById('f-measures').value = `${_fmtM(m.l)} x ${_fmtM(m.c)}`;
+    if (c.alturas && c.alturas.length) document.getElementById('f-height').value = c.alturas.join(' / ');
+    const desc = document.getElementById('f-desc');
+    if (!desc.value.trim()) desc.value = `${c.linha}. ${c.descricao}\nCamadas: ${c.camadas}.${c.noTurn ? ' Sistema No Turn.' : ''}`;
+    const url = document.getElementById('f-photo-url');
+    if (!url.value.trim() && c.foto) {
+      url.value = c.foto;
+      const pv = document.getElementById('f-photo-preview'); pv.src = c.foto; pv.style.display = 'block';
+    }
+    UI.toast(`Dados do ${c.modelo} preenchidos. Informe custo, preço e estoque.`, 'success');
+  }
+
+  return { render, _filter, _search, _goPage, _openForm, _calcPrice, _save, _delete, _catFiltrar, _catAplicar };
 })();
